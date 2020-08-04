@@ -2,11 +2,11 @@ FROM python
 
 WORKDIR /app
 
-COPY python/requirements.txt /app/
+COPY requirements.txt /app/
 
 RUN pip install -r requirements.txt
 
-COPY python/ /app
+COPY /. /app
 
 EXPOSE 20880
 
