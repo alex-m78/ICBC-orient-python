@@ -9,7 +9,7 @@ class Kafka_consumer():
         self.kafkaPort = kafkaport
         self.kafkatopic = kafkatopic
         self.consumer = KafkaConsumer(
-            self.kafkatopic,
+            #self.kafkatopic,
             bootstrap_servers='{kafka_host}:{kafka_port}'.format(
                 kafka_host=self.kafkaHost,
                 kafka_port=self.kafkaPort),
