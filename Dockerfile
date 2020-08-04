@@ -6,7 +6,7 @@ COPY requirements.txt /app/
 
 RUN pip install -r requirements.txt
 
-COPY /. /app
+COPY / /app
 
 EXPOSE 20880
 
