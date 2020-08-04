@@ -10,7 +10,7 @@ from producer import Kafka_producer
 def handle_request():
     KAFAKA_HOST = "47.103.137.116"
     KAFAKA_PORT = 9092
-    KAFKA_TOPIC = 'topic002'
+    KAFKA_TOPIC = ['topic002']
 
     consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, kafkatopic=KAFKA_TOPIC)
     producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,
