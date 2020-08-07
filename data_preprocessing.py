@@ -29,6 +29,7 @@ def get_train_data(truncate, train_year=['2016','2017','2018'], test_season=['20
        #=====================================================================
 
        select_feature = list(set(convert_dict_reversed.values()) - set(['symbol', 'ann_date', 'name', 'area', 'industry', 'market', 'list_date', 'setup_date']))
+       select_feature.sort()
 
        df_train = pd.concat([df,onehot_train], 1)[select_feature]
 
@@ -50,7 +51,7 @@ def split_data(df_train, train_year, test_season):
             test = test.append(group, ignore_index=True)
 
 
-    train = train.sample(frac=1.0, random_state=2020)
+    train = train.sample(frac=1.0, random_state=2020, axis=0)
     y_train = train['label_new']
     x_train = train.drop(columns=['label_new','ts_code', 'end_date'])
     y_test = test['label_new']

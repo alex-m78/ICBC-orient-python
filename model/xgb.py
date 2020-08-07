@@ -26,24 +26,24 @@ def get_xgb_prediction(test_season=['20180930'], load=False):
                     'learning_rate': 0.1,
                     'colsample_bytree': 1, 'colsample_bylevel': 0.5, 'subsample': 1.0, 'reg_lambda': 40,
                     'reg_alpha': 10,
-                    'seed': 1302, 'scale_pos_weight': 1}
+                    'seed': 2020, 'scale_pos_weight': 1}
     time2 = time.time()
     if load:
-        columns_name = pickle.load(open(os.getcwd()+'/saved_model/columns.pkl','rb'))
-        model = pickle.load(open(os.getcwd()+"/saved_model/xgb.dat", "rb"))
-        x_test = x_test[columns_name]
+        # columns_name = pickle.load(open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'rb'))
+        model = pickle.load(open(os.getcwd()+"/saved_model/xgb_{}.dat".format(test_season[0]), "rb"))
+        # x_test = x_test[columns_name]
     else:
         model = xgb.XGBClassifier(**other_params)
         model.fit(x_train, y_train)
-        pickle.dump(model, open(os.getcwd()+ "/saved_model/xgb.dat", "wb"))
-        pickle.dump(x_train.columns, open(os.getcwd()+'/saved_model/columns.pkl','wb'))
+        pickle.dump(model, open(os.getcwd()+ "/saved_model/2xgb_{}.dat".format(test_season[0]), "wb"))
+        # pickle.dump(x_train.columns, open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'wb'))
     print('computed time:',time.time()-time2)
     time3 = time.time()
 
     y_pred = model.predict_proba(x_test)[:, 1]
 
     res = output_result(y_pred, test_name, test_season)
-    print('p10:{:.4f},p20:{:.4f},p50:{:.4f},p100:{:.4f}'.format(precision_n(y_test, y_pred, 10),precision_n(y_test, y_pred, 20),precision_n(y_test, y_pred, 50),precision_n(y_test, y_pred, 100)))
+    print('p10:{:.4f},p20:{:.4f},p30:{:.4f},p50:{:.4f},p100:{:.4f}'.format(precision_n(y_test, y_pred, 10),precision_n(y_test, y_pred, 20),precision_n(y_test, y_pred, 30),precision_n(y_test, y_pred, 50),precision_n(y_test, y_pred, 100)))
     print('output time:',time.time()-time3)
     return res
 

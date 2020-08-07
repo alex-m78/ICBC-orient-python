@@ -10,8 +10,8 @@ from producer import Kafka_producer
 def handle_request():
     KAFAKA_HOST = "47.103.137.116"
     KAFAKA_PORT = 9092
-    KAFKA_TOPIC_REC = 'topic_rec'
-    KAFKA_TOPIC_SEND = 'topic_send'
+    KAFKA_TOPIC_REC = 'topic_rec1'
+    KAFKA_TOPIC_SEND = 'topic_send1'
 
     consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFKA_TOPIC_REC)
     producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,KAFKA_TOPIC_SEND, key='predictions')
@@ -34,8 +34,6 @@ def handle_request():
                 predictions.append({k: row[k] for k in res_columns})
             params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
             producer.sendjsondata(params)
-            producer.sendstrdata('END')
-            print(params)
         # else:
             # producer.sendstrdata('wrong key')
             # print('wrong key')

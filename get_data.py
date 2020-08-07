@@ -451,17 +451,17 @@ def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=Fa
 
     df_pos = pd.concat(pos_lst, axis=0)
 
-    df_stock_day2season = pd.read_sql('select * from stock_daily_to_season', engine_ts)
-    df_stock_day2season.rename(columns={'period':'end_date'}, inplace=True)
-    df = pd.merge(df_pos, df_stock_day2season, how='right', on=['ts_code', 'end_date'])
-
     df_stock_season = pd.read_sql('select * from stock_season_basic', engine_ts)
     df_stock_season = df_stock_season[df_stock_season['end_date'].isin(date_lst)]
-    df = pd.merge(df_stock_season, df, how='right', on=['ts_code','end_date'])
+    df = pd.merge(df_stock_season, df_pos, how='left', on=['ts_code','end_date'])
+
+    df_stock_day2season = pd.read_sql('select * from stock_daily_to_season', engine_ts)
+    df_stock_day2season.rename(columns={'period':'end_date'}, inplace=True)
+    df = pd.merge(df, df_stock_day2season, how='left', on=['ts_code', 'end_date'])
 
     df_stock_month2season = pd.read_sql('select * from stock_month_to_season', engine_ts)
     df_stock_month2season.rename(columns={'period':'end_date'}, inplace=True)
-    df = pd.merge(df, df_stock_month2season, how='outer', on=['ts_code', 'end_date'])
+    df = pd.merge(df, df_stock_month2season, how='left', on=['ts_code', 'end_date'])
 
     df_stock_basic = pd.read_sql('select * from stock_basic', engine_ts)
     df = pd.merge(df, df_stock_basic, how='left', on=['ts_code'])
@@ -485,10 +485,9 @@ def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=Fa
             print(c)
 
     df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
-    df_res = df_res[df.columns]
     df_res = pd.concat([df,df_res], 0)
     df_res.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
-    df_res.to_sql('train_data_{}new'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
+    df_res.to_sql('train_data_{}'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
     # df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
     # df.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
     # df.to_sql('train_data_{}'.format(truncate), engine_ts, index=False,if_exists='replace', chunksize=5000)
@@ -775,7 +774,7 @@ def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 
 
     for season in test_season:
         res = get_xgb_prediction(test_season=[season], load=False).iloc[:100]
-        res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
+        # res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
         print(season)
 
 
@@ -862,7 +861,7 @@ if __name__ == '__main__':
     df_base = pro.stock_basic()
     #
     # print(1)
-    df_stock_season = get_season_basic(df_base=df_base, start_date='20200101', end_date='20200630', replace=True) #股票财务信息
+    # df_stock_season = get_season_basic(df_base=df_base, start_date='20200101', end_date='20200630', replace=True) #股票财务信息
     # print(2)
     # df_stock_monthly = get_stock_monthly(df_base=df_base,start_date='20200101', end_date='20200630', replace=False)  #股票月行情
     # print(3)
@@ -879,7 +878,7 @@ if __name__ == '__main__':
     # visualize()
     # revise_name()
     truncate=3
-    # get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
+    get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
     # corr_analy(truncate=truncate, replace=True)
     # corr_heatmap()
 
@@ -893,7 +892,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    # get_result([20200331,20200630])
+    # get_result()
     # visualize_ar_car(end_date = '20190930')
     # get_predicted_and_real()
     # stock = ['000001.SZ', '000002.SZ', '000004.SZ', '000005.SZ', '000006.SZ']
