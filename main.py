@@ -10,27 +10,36 @@ from producer import Kafka_producer
 def handle_request():
     KAFAKA_HOST = "47.103.137.116"
     KAFAKA_PORT = 9092
-    KAFKA_TOPIC = ['topic002']
+    KAFKA_TOPIC_REC = 'topic_rec'
+    KAFKA_TOPIC_SEND = 'topic_send'
 
-    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, kafkatopic=KAFKA_TOPIC)
-    producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,
-                              kafkatopic=KAFKA_TOPIC, key='predictions')
+    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFKA_TOPIC_REC)
+    producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,KAFKA_TOPIC_SEND, key='predictions')
 
     print("===========> consumer:", consumer)
-
     message = consumer.consume_data()
     for msg in message:
 
         print('msg---------------->k,v', msg.key, msg.value)
 
-        if msg.key == b'end_date':
+        if msg.key == b'endDate':
             print("===========> producer:", producer)
-            res = get_xgb_prediction(test_season=[msg.value], load=True)
+            msg.value.decode('utf-8')
+            print(msg.value.decode('utf-8'))
+            res = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True)
             res_columns = res.columns
+            res = res.iloc[:100]
+            predictions = []
             for i, (_, row) in enumerate(res.iterrows()):
-                params = [{k: row[k] for k in res_columns}]
-                producer.sendjsondata(params)
-
+                predictions.append({k: row[k] for k in res_columns})
+            params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
+            producer.sendjsondata(params)
+            producer.sendstrdata('END')
+            print(params)
+        # else:
+            # producer.sendstrdata('wrong key')
+            # print('wrong key')
 
 if __name__ == '__main__':
     handle_request()
+

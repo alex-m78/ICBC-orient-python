@@ -8,19 +8,14 @@ class Kafka_consumer():
         self.kafkaHost = kafkahost
         self.kafkaPort = kafkaport
         self.kafkatopic = kafkatopic
-        # self.consumer = KafkaConsumer(
-        #     # self.kafkatopic,
-        #     bootstrap_servers='{kafka_host}:{kafka_port}'.format(
-        #         kafka_host=self.kafkaHost,
-        #         kafka_port=self.kafkaPort),
-        #     group_id=group_id
-        # )
         self.consumer = KafkaConsumer(
-            group_id='test',
-            bootstrap_servers=['47.103.137.116:9092'],
-            # value_deserializer=lambda m: m
+            self.kafkatopic,
+            bootstrap_servers='{kafka_host}:{kafka_port}'.format(
+                kafka_host=self.kafkaHost,
+                kafka_port=self.kafkaPort),
+            group_id=group_id
         )
-        self.consumer.subscribe(topics=['topic002'])
+        self.consumer.subscribe(self.kafkatopic)
 
     def consume_data(self):
         try:
@@ -34,7 +29,7 @@ def main():
     KAFAKA_HOST = "localhost"
     KAFAKA_PORT = 9092
     KAFAKA_TOPIC = "result"
-    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFAKA_TOPIC)
+    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFAKA_TOPIC, group_id='test')
     print("===========> consumer:", consumer)
     message = consumer.consume_data()
     for msg in message:

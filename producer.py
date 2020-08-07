@@ -37,6 +37,17 @@ class Kafka_producer():
         except KafkaError as e:
             print(e)
 
+    def sendstrdata(self, string):
+        try:
+            producer = self.producer
+            print("send msg:(string)", string)
+            k = self.key.encode('utf-8')
+            v = string.encode('utf-8')
+            producer.send(self.kafkatopic, key=k, value=v)
+            producer.flush()
+        except KafkaError as e:
+            print(e)
+
 
 def main(end_date='20180630'):
     key = 'end_date'

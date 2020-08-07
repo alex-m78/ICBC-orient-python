@@ -19,7 +19,7 @@ def get_xgb_prediction(test_season=['20180930'], load=False):
     truncate = 3
     x_train, x_test, y_train, y_test, test_name = get_train_data(truncate=truncate,
                                                                  train_year=['2016', '2017', '2018', '2019'],
-                                                                 test_season=['20180630'])
+                                                                 test_season=test_season)
     print('load data time:',time.time()-time1)
 
     other_params = {'eta': 0.3, 'n_estimators': 120, 'gamma': 0, 'max_depth': 6, 'min_child_weight': 12,

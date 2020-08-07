@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
+from model.xgb import get_xgb_prediction
 
 base_dict = {'symbol': '股票代码', 'name': '股票名称', 'area': '所在地域', 'industry': '所属行业', 'market': '市场类型',
              'list_date': '上市日期', 'setup_date': '注册日期', 'employees': '员工人数'}
@@ -123,8 +124,27 @@ def get_basic_info():
     # res = df.to_sql('stock_basic', engine_ts, index=False, if_exists='append', chunksize=5000)
     return df
 
-def get_season_basic(df_base, start_date='20160101', end_date='20201231', replace=False):
+
+def get_season_basic(df_base, start_date='20160101', end_date='20191231', replace=False):
     # start_date, end_date = '20160101', '20201231'
+    date_lst = []
+    for i in range(int(start_date[:4]), int(end_date[:4]) + 1):
+        for last_4 in ['0331', '0630', '0930', '1231']:
+            date_lst.append(str(i) + last_4)
+    if start_date[-4:] == '0401':
+        date_lst = date_lst[1:]
+    elif start_date[-4:] == '0701':
+        date_lst = date_lst[2:]
+    elif start_date[-4:] == '1001':
+        date_lst = date_lst[3:]
+
+    if end_date[-4:] == '0930':
+        date_lst = date_lst[:-1]
+    elif end_date[-4:] == '0630':
+        date_lst = date_lst[:-2]
+    elif end_date[-4:] == '0331':
+        date_lst = date_lst[:-3]
+
     indicator_dict = {'ts_code':'ts_code','ann_date':'ann_date','end_date':'end_date','q_eps':'每股收益(单季度)','eps':'每股收益','revenue_ps':'每股营业收入','capital_rese_ps':'每股资本公积','surplus_rese_ps':'每股盈余公积',
                       'current_ratio':'流动比率','quick_ratio':'速动比率','profit_to_gr':'净利润/营业总收入','q_profit_to_gr':'净利润/营业总收入(单季度)','op_of_gr':'营业利润/营业总收入','q_op_to_gr':'营业利润/营业总收入(单季度)','roe':'净资产收益率','q_roe':'净资产收益率(单季度)',
                       'roe_waa':'加权平均净资产收益率','roa_dp':'总资产净利率(杜邦分析)','debt_to_assets':'资产负债率','assets_turn':'总资产周转率','bps':'每股净资产','cfps':'每股现金流',
@@ -154,23 +174,37 @@ def get_season_basic(df_base, start_date='20160101', end_date='20201231', replac
         # df_indicator.rename(columns=indicator_dict, inplace=True)
         # df_balance.rename(columns=balance_dict, inplace=True)
         # df_income.rename(columns=income_dict, inplace=True)
+        df = pd.DataFrame(columns=['ts_code', 'end_date'])
+        df['end_date'] = date_lst
+        df['ts_code'] = ts_code
 
-        df = pd.merge(df_indicator, df_balance, how='left', on=['ts_code','end_date'])
+        df = pd.merge(df, df_indicator, how='left', on=['ts_code','end_date'])
+
+        df = pd.merge(df, df_balance, how='left', on=['ts_code','end_date'])
         df = pd.merge(df, df_income, how='left', on=['ts_code','end_date'])
         df_res = df_res.append(df, ignore_index=True)
         if i%10 == 0:
             print('finish',i,'/',len(df_base),'time', time.time()-start_time)
             time.sleep(12)
             start_time = time.time()
+
+
+    df = pd.read_sql('select * from stock_season_basic', engine_ts)
+    df_res = df_res[df.columns]
+    df_res = pd.concat([df,df_res], 0)
+    df_res.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
     df_res.to_sql('stock_season_basic', engine_ts, index=False, if_exists='replace' if replace else'append',
                   chunksize=5000)
     return df_res
 
+
 def get_fund_basic():
     df_fund_base = pro.fund_basic(market='O', status='L')
     df_fund_base = df_fund_base[(df_fund_base['fund_type'] == '混合型') | (df_fund_base['fund_type'] == '股票型')]
+    df_fund_base = df_fund_base[df_fund_base['found_date'] <'20200101']
     # res = df_fund_base.to_sql('fund_basic', engine_ts, index=False, if_exists='append', chunksize=5000)
     return df_fund_base
+
 
 def get_season_fund(df_fund_base, start_date='20160101', end_date='20191231', replace=False):
     if end_date[-4:] == '1231': end_date = str(int(end_date[:4])+1)+'0401'
@@ -207,6 +241,7 @@ def get_season_fund(df_fund_base, start_date='20160101', end_date='20191231', re
             df.to_sql('holding_{}'.format(key), engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
             print(key,len(subdict))
 
+
 def get_stock_monthly(df_base, start_date='20160101', end_date='20191231', replace=False):
     # start_date, end_date = '20160101', '20191231'
     monthly_dict = {'ts_code':'ts_code','trade_date':'交易日期','close':'月收盘价','open':'月开盘价','high':'月最高价','low':'月最低价',
@@ -226,6 +261,7 @@ def get_stock_monthly(df_base, start_date='20160101', end_date='20191231', repla
     df_res.to_sql('stock_monthly', engine_ts, index=False, if_exists='replace' if replace else 'append',
                       chunksize=5000)
 
+
 def get_stock_daily(df_base, start_date='20160101', end_date='20191231', replace=False):
     # start_date, end_date = '20160101', '20191231'
     daily_dict = {'ts_code':'ts_code','trade_date':'交易日期','close':'当日收盘价','turnover_rate':'换手率',
@@ -244,6 +280,7 @@ def get_stock_daily(df_base, start_date='20160101', end_date='20191231', replace
     df_res.to_sql('stock_daily', engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
     return df_res
 
+
 def month2season(start_date='20160101', end_date='20191231', replace=False):
     df_stock_monthly = pd.read_sql('select * from stock_monthly', engine_ts)
     df_stock_monthly = df_stock_monthly[(df_stock_monthly['trade_date']>=start_date) & (df_stock_monthly['trade_date']<=end_date)]
@@ -251,13 +288,13 @@ def month2season(start_date='20160101', end_date='20191231', replace=False):
     for i in range(int(start_date[:4]),int(end_date[:4])+1):
         for last_4 in ['0331','0630', '0930', '1231']:
             date_bin.append(str(i)+last_4)
-    if start_date == '0401': date_bin = date_bin[1:]
-    elif start_date == '0701': date_bin = date_bin[2:]
-    elif start_date == '1001': date_bin = date_bin[3:]
+    if start_date[-4:] == '0401': date_bin = date_bin[1:]
+    elif start_date[-4:] == '0701': date_bin = date_bin[2:]
+    elif start_date[-4:] == '1001': date_bin = date_bin[3:]
 
-    if end_date == '0930': date_bin = date_bin[:-1]
-    elif end_date == '0630': date_bin = date_bin[:-2]
-    elif end_date == '0331': date_bin = date_bin[:-3]
+    if end_date[-4:] == '0930': date_bin = date_bin[:-1]
+    elif end_date[-4:] == '0630': date_bin = date_bin[:-2]
+    elif end_date[-4:] == '0331': date_bin = date_bin[:-3]
 
     date_bin = [int(x) for x in date_bin]
     # date_bin = [20151231, 20160331, 20160630, 20160930, 20161231, 20170331, 20170630, 20170930,
@@ -280,7 +317,7 @@ def month2season(start_date='20160101', end_date='20191231', replace=False):
         for date, sub_group in sub_g:
             s = sub_group['pct_chg']
             for i, index in enumerate(s.index):
-                df1.loc[date, 'pct_chg'.format(i)] = s[index]
+                df1.loc[date, 'pct_chg_{}'.format(i)] = s[index]
         df_res = df_res.append(df1, ignore_index=True)
         c += 1
         if c%10==0:
@@ -298,18 +335,18 @@ def day2season(start_date='20160101', end_date='20191231', replace=False):
     for i in range(int(start_date[:4]), int(end_date[:4]) + 1):
         for last_4 in ['0331', '0630', '0930', '1231']:
             date_bin.append(str(i) + last_4)
-    if start_date == '0401':
+    if start_date[-4:] == '0401':
         date_bin = date_bin[1:]
-    elif start_date == '0701':
+    elif start_date[-4:] == '0701':
         date_bin = date_bin[2:]
-    elif start_date == '1001':
+    elif start_date[-4:] == '1001':
         date_bin = date_bin[3:]
 
-    if end_date == '0930':
+    if end_date[-4:] == '0930':
         date_bin = date_bin[:-1]
-    elif end_date == '0630':
+    elif end_date[-4:] == '0630':
         date_bin = date_bin[:-2]
-    elif end_date == '0331':
+    elif end_date[-4:] == '0331':
         date_bin = date_bin[:-3]
 
     date_bin = [int(x) for x in date_bin]
@@ -337,7 +374,7 @@ def day2season(start_date='20160101', end_date='20191231', replace=False):
         if c % 10==0:
             print('finish', c, 'time', time.time() - start_time)
             start_time = time.time()
-    df_res.to_sql('stock_day_to_season', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
+    df_res.to_sql('stock_daily_to_season', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
 
 
 def visualize(date_lst= ['20161231']):
@@ -356,6 +393,7 @@ def visualize(date_lst= ['20161231']):
     # plt.figure()
     df_count.plot(kind='bar')
     plt.show()
+
 
 def visualize_holding_number():
     date_lst = [20160331, 20160630, 20160930, 20161231, 20170331, 20170630, 20170930,
@@ -385,19 +423,18 @@ def visualize_holding_number():
     final.to_sql('visualize_count', engine_ts, index=False, if_exists='replace', chunksize=5000)
 
 
-
 def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=False):
     date_lst = []
     for i in range(int(start_date[:4]),int(end_date[:4])+1):
         for last_4 in ['0331','0630', '0930', '1231']:
             date_lst.append(str(i)+last_4)
-    if start_date == '0401': date_lst = date_lst[1:]
-    elif start_date == '0701': date_lst = date_lst[2:]
-    elif start_date == '1001': date_lst = date_lst[3:]
+    if start_date[-4:] == '0401': date_lst = date_lst[1:]
+    elif start_date[-4:] == '0701': date_lst = date_lst[2:]
+    elif start_date[-4:] == '1001': date_lst = date_lst[3:]
 
-    if end_date == '0930': date_lst = date_lst[:-1]
-    elif end_date == '0630': date_lst = date_lst[:-2]
-    elif end_date == '0331': date_lst = date_lst[:-3]
+    if end_date[-4:] == '0930': date_lst = date_lst[:-1]
+    elif end_date[-4:] == '0630': date_lst = date_lst[:-2]
+    elif end_date[-4:] == '0331': date_lst = date_lst[:-3]
     # date_lst = [20160331, 20160630, 20160930, 20161231, 20170331, 20170630, 20170930,
     #  20171231, 20180331, 20180630, 20180930, 20181231, 20190331, 20190630, 20190930, 20191231]
     # date_lst = [str(x) for x in date_lst]
@@ -414,16 +451,17 @@ def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=Fa
 
     df_pos = pd.concat(pos_lst, axis=0)
 
-    df_stock_season = pd.read_sql('select * from stock_season_basic', engine_ts)
-    df = pd.merge(df_stock_season, df_pos, how='left', on=['ts_code','end_date'])
-
     df_stock_day2season = pd.read_sql('select * from stock_daily_to_season', engine_ts)
     df_stock_day2season.rename(columns={'period':'end_date'}, inplace=True)
-    df = pd.merge(df, df_stock_day2season, how='left', on=['ts_code', 'end_date'])
+    df = pd.merge(df_pos, df_stock_day2season, how='right', on=['ts_code', 'end_date'])
+
+    df_stock_season = pd.read_sql('select * from stock_season_basic', engine_ts)
+    df_stock_season = df_stock_season[df_stock_season['end_date'].isin(date_lst)]
+    df = pd.merge(df_stock_season, df, how='right', on=['ts_code','end_date'])
 
     df_stock_month2season = pd.read_sql('select * from stock_month_to_season', engine_ts)
     df_stock_month2season.rename(columns={'period':'end_date'}, inplace=True)
-    df = pd.merge(df, df_stock_month2season, how='left', on=['ts_code', 'end_date'])
+    df = pd.merge(df, df_stock_month2season, how='outer', on=['ts_code', 'end_date'])
 
     df_stock_basic = pd.read_sql('select * from stock_basic', engine_ts)
     df = pd.merge(df, df_stock_basic, how='left', on=['ts_code'])
@@ -446,7 +484,15 @@ def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=Fa
         if c % 10 ==0:
             print(c)
 
-    df_res.to_sql('train_data_{}'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
+    df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
+    df_res = df_res[df.columns]
+    df_res = pd.concat([df,df_res], 0)
+    df_res.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
+    df_res.to_sql('train_data_{}new'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
+    # df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
+    # df.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
+    # df.to_sql('train_data_{}'.format(truncate), engine_ts, index=False,if_exists='replace', chunksize=5000)
+
 
 
 def missing_values_table(df):
@@ -481,34 +527,42 @@ def corr_heatmap(truncate=3):
     df_data = pd.read_sql('select * from train_data_fillna_{}'.format(truncate), engine_ts)
     feature_lst = list(set(final_dict.keys()) - set(['symbol','ts_code','end_date','symbol','name','area','industry','market','list_date','setup_date','close_std', 'chg_max_pos', 'chg_max_neg']))
     df_data = df_data[feature_lst]
-    correlations = df_data.corr()
-    correction=abs(correlations)
-    f, ax = plt.subplots(figsize=(12, 12))
-    sns.heatmap(correction, vmax=1, square=True)
-    plt.savefig('Correlation-Matrix.png')
-    for each in feature_lst:
-        print(each, final_dict[each])
-    correlations = df_data.corr()['label_new'].sort_values()
-    # Display correlations
-    print('Most Positive Correlations:\n', correlations.tail(30))
-    print('\nMost Negative Correlations:\n', correlations.head(30))
+    # correlations = df_data.corr()
+    # correction=abs(correlations)
 
+    # f, ax = plt.subplots(figsize=(12, 12))
+    # sns.heatmap(correction, vmax=1, square=True)
+    # plt.savefig('Correlation-Matrix.png')
     # for each in feature_lst:
-    #     if each != 'label_new':
-    #         f, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(16,4))
-    #         bins = 30
-    #         ax1.hist(df_data[df_data["label_new"]== 1][each], bins = bins)
-    #         ax1.set_title('Fraud')
-    #
-    #         ax2.hist(df_data[df_data["label_new"] == 0][each], bins = bins)
-    #         ax2.set_title('Normal')
-    #
-    #         plt.xlabel(each)
-    #         plt.ylabel('Number of being held')
-    #         # plt.yscale('log')
-    #         if each == 'float_share/total_share':
-    #             each = 'float_share_chu_total_share'
-    #         plt.savefig('image/{}.png'.format(each))
+    #     print(each, final_dict[each])
+    # correlations = df_data.corr()['label_new'].sort_values()
+    # # Display correlations
+    # print('Most Positive Correlations:\n', correlations.tail(30))
+    # print('\nMost Negative Correlations:\n', correlations.head(30))
+
+    import seaborn as sns
+
+
+
+
+    for each in feature_lst:
+        if each != 'label_new':
+            # f, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(16,4))
+            # bins = 30
+            # ax1.hist(df_data[df_data["label_new"]== 1][each], bins = bins)
+            # ax1.set_title('Fraud')
+            #
+            # ax2.hist(df_data[df_data["label_new"] == 0][each], bins = bins)
+            # ax2.set_title('Normal')
+
+            # plt.xlabel(each)
+            # plt.ylabel('Number of being held')
+            # plt.yscale('log')
+
+            sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
+            sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
+            plt.legend()
+            plt.savefig('image/{}.png'.format(each))
 
 
 def corr_analy(truncate=3, replace=False):
@@ -519,17 +573,6 @@ def corr_analy(truncate=3, replace=False):
         df_data[each] = df_data[each].astype(float)
 
 
-    # df_data['流动比率'] = df_data['流动比率'].astype(float)
-    # df_data['速动比率'] = df_data['速动比率'].astype(float)
-    # df_data['存货周转率'] = df_data['存货周转率'].astype(float)
-    # df_data['应收账款周转率'] = df_data['应收账款周转率'].astype(float)
-    # df_data['流动资产周转率'] = df_data['流动资产周转率'].astype(float)
-    # df_data['流动负债'] = df_data['流动负债'].astype(float)
-
-    #计算指标
-    # df_data['流通A比例'] = df_data['流通股本(万)_mean']/df_data['总股本(万)_mean']
-    # df_data['上市时间'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['上市日期'].apply(lambda x:int(str(x)[:4]))
-    # df_data['公司成立时间'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['注册日期'].apply(lambda x:int(str(x)[:4]))
     df_data['list_date'].fillna('null', inplace=True)
     df_data.drop(df_data[df_data['list_date'] =='null'].index, inplace=True)
     df_data['float_share_to_total_share'] = df_data['float_share_mean']/df_data['total_share_mean']
@@ -544,38 +587,22 @@ def corr_analy(truncate=3, replace=False):
     df_data.drop(df_data[df_data['filter'] == '1231'].index, inplace=True)
     print(len(df_data))
 
-    # feature_lst = ['每股收益', '每股营业收入', '每股资本公积', '每股盈余公积',
-    #                '每股未分配利润', '流动比率', '速动比率', '存货周转率', '应收账款周转率', '流动资产周转率', '总资产周转率',
-    #                '每股净资产', '每股现金流', '净利润/营业总收入', '营业利润/营业总收入', '净资产收益率', '加权平均净资产收益率',
-    #                '所得税/利润总额', '净现比', '资产负债率', '总资产净利率(杜邦分析)', '每股收益(单季度)',
-    #                '净利润/营业总收入(单季度)', '营业利润/营业总收入(单季度)', '净资产收益率(单季度)', '每股收益同比增长率',
-    #                '每股现金流同比增长率', '营业收入同比增长率', '营业收入同比增长率(单季度)', '净利润同比增长率(单季度)',
-    #                '净资产同比增长率', '应收账款', '固定资产', '流动负债', '营业收入', '利润总额', '所得税', 'label',
-    #                '换手率_mean', '市盈率TTM_amin', '市盈率TTM_amax', '市盈率TTM_mean', '市净率_amin',
-    #                '市净率_amax', '市净率_mean', '市销率（TTM）_amin', '市销率（TTM）_amax',
-    #                '市销率（TTM）_mean', '股息率TTM_mean', '总股本(万)_mean', '总市值(万)_mean',
-    #                '流通股本(万)_mean', '流通市值(万)_mean', '季最高价', '季最低价', '季成交量', '月涨跌幅(复权)_0',
-    #                '月涨跌幅(复权)_1', '月涨跌幅(复权)_2',
-    #                '员工人数', '流通A比例', '上市时间', '公司成立时间','季最大涨幅','季最大跌幅']
     feature_lst = list(set(final_dict.keys()) - set(['symbol','end_date','ts_code','ann_date','name','area','industry','market','list_date','setup_date']))
 
-    # final_dict_reversed = {v:k for (k,v) in final_dict.items()}
-
     contrast = pd.DataFrame(columns=('feature','mean_1','std_1', 'len_1','t_1','mean_0', 'std_0', 'len_0','t_0'))
-    for key in feature_lst:
-        # if key in final_dict_reversed:
-        #     each = final_dict_reversed[key]
-        # else:
-        each = key
+    correlations = df_data.corr()['label_new'].sort_values()
+
+    for each in feature_lst:
         mean_1 = df_data[df_data['label_new']==1][each].mean()
         mean_0 = df_data[df_data['label_new']==0][each].mean()
         std_1 = df_data[df_data['label_new'] == 1][each].std()
         std_0 = df_data[df_data['label_new'] == 0][each].std()
-        len_1 = len(df_data[df_data['label_new']==1][each])
-        len_0 = len(df_data[df_data['label_new']==0][each])
-        contrast = contrast.append([{'feature':key,'mean_1':mean_1,'std_1':std_1,'len_1':len_1,'mean_0':mean_0, 'std_0':std_0,'len_0':len_0}], ignore_index=True)
+        len_1 = df_data[df_data['label_new']==1][each].count()
+        len_0 = df_data[df_data['label_new']==0][each].count()
+        contrast = contrast.append([{'feature':final_dict[each],'mean_1':mean_1,'std_1':std_1,'len_1':len_1,'mean_0':mean_0, 'std_0':std_0,'len_0':len_0,'corr':correlations[each]}], ignore_index=True)
+    contrast = contrast.round(2)
     contrast.to_sql('contrast_{}'.format(truncate), engine_ts, index=False, if_exists='replace', chunksize=5000)
-
+    exit()
     #缺失值填充
     df_data['pb_amin'].fillna(0, inplace=True)
     df_data['pb_amax'].fillna(0, inplace=True)
@@ -613,6 +640,7 @@ def corr_analy(truncate=3, replace=False):
     print('Most Positive Correlations:\n', correlations.tail(30))
     print('\nMost Negative Correlations:\n', correlations.head(30))
 
+
 def get_ar(df_base, start_date='20160101', end_date='20191231', replace=False):
 
     start_time = time.time()
@@ -633,6 +661,7 @@ def get_ar(df_base, start_date='20160101', end_date='20191231', replace=False):
     df_res.to_sql('stock_car', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
 
     return
+
 
 def get_car(start_date='20160101', end_date='20191231'):
     df_ar = pd.read_sql('select * from stock_car', engine_ts)
@@ -659,7 +688,6 @@ def get_car(start_date='20160101', end_date='20191231'):
     # sub_g = group.groupby(date_groups)
 
 
-
 def end_to_trade(end_date):
     if end_date[-4:] == '0331':
         trade_date = [end_date[:4]+'0101',end_date[:4]+'0630']
@@ -673,6 +701,7 @@ def end_to_trade(end_date):
         print('false end_date input')
         return
     return trade_date[0], trade_date[1]
+
 
 def visualize_car(truncate=3, end_date = '20190331'):
     df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)[['ts_code', 'end_date', 'label_new']]
@@ -702,14 +731,127 @@ def visualize_car(truncate=3, end_date = '20190331'):
         fig.savefig('{}_car_{}.png'.format(end_date, 1-label))
 
 
+
+def visualize_ar_car(end_date = '20190331'):
+    df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)[['ts_code', 'end_date', 'label_new']]
+    df['end_date'] = df['end_date'].astype(str)
+    df_car = pd.read_sql('select * from stock_car', engine_ts)[['ts_code', 'trade_date', 'ar']]
+
+    df_1 = df[(df['label_new'] == 1) & (df['end_date'] == end_date)]
+    df_0 = df[(df['label_new'] == 0) & (df['end_date'] == end_date)]
+
+    df_res = pd.DataFrame()
+    for label, df_label in enumerate([df_1, df_0]):
+        for i, (_, row) in enumerate(df_label.iterrows()):
+            trade_date_min, trade_date_max = end_to_trade(row['end_date'])
+            df_row = df_car[(df_car['ts_code'] == row['ts_code']) & (df_car['trade_date'] >= trade_date_min) & (
+                        df_car['trade_date'] <= trade_date_max)]
+            df_row.sort_values(['trade_date'], ascending=True, inplace=True)
+            df_row['end_date'] = row['end_date']
+            df_res = df_res.append(df_row, ignore_index=True)
+            print(i, '/', len(df_label))
+
+        df_res = df_res.groupby('trade_date').mean()
+        df_res.sort_values(['trade_date'], inplace=True, ascending=True)
+        df_res = df_res.reset_index()
+        df_res['car'] = df_res['ar'].cumsum()
+        df_res['end_date']=end_date
+        df_res['label_new'] = 1-label
+        # df_res.to_csv('visualize_car_ar_{}'.format(end_date))
+        df_res.to_sql('visualize_car_ar_{}'.format(end_date), engine_ts, index=False, if_exists='append', chunksize=5000)
+
+
+
 def show_result(truncate=3):
     df = pd.read_sql('select * from train_data_fillna_{}'.format(truncate), engine_ts)
-    df = df[['ts_code', 'end_date','symbol', 'name', 'total_mv_mean', 'float_share_to_total_share','eps','label_new']]
+    df = df[['ts_code', 'end_date','symbol', 'name', 'total_mv_mean', 'float_share_to_total_share','eps','pb_mean', 'roe', 'pe_ttm_mean', 'bps','industry','label_new']]
 
     df.to_sql('display_prediction', engine_ts, index=False, if_exists='replace', chunksize=5000)
 
 
+def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 20170930,
+                   20180331, 20180630, 20180930, 20190331, 20190630, 20190930]):
+    test_season = [str(x) for x in test_season]
 
+    for season in test_season:
+        res = get_xgb_prediction(test_season=[season], load=False).iloc[:100]
+        res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
+        print(season)
+
+
+def RPS(df_base, start_date='20160101', end_date='20191231', replace=False):
+    def get_data(code, start='20180101', end='20190319'):
+        df = pro.daily(ts_code=code, start_date=start, end_date=end, fields='trade_date,close')
+        df.index = pd.to_datetime(df.trade_date)
+        df = df.sort_index()
+        return df.close
+
+    def cal_ret(df, w=5):
+        df = df / df.shift(w) - 1
+        return df.iloc[w:, :].fillna(0)
+
+    data = pd.DataFrame()
+    for i, ts_code in enumerate(df_base['ts_code']):
+        data[ts_code] = get_data(ts_code)
+
+    ret120 = cal_ret(data, w=120)
+    ret250 = cal_ret(data, w=250)
+
+    def get_RPS(ser):
+        df = pd.DataFrame(ser.sort_values(ascending=False))
+        df['n'] = range(1, len(df) + 1)
+        df['rps'] = (1 - df['n'] / len(df)) * 100
+        return df
+
+    def all_RPS(data):
+        dates = (data.index).strftime('%Y%m%d')
+        RPS = {}
+        for i in range(len(data)):
+            RPS[dates[i]] = pd.DataFrame(get_RPS(data.iloc[i]).values, columns=['yeild', 'rank', 'RPS'],
+                                         index=get_RPS(data.iloc[i]).index)
+        return RPS
+
+    rps120 = all_RPS(ret120)
+    rps250 = all_RPS(ret250)
+
+    def all_data(rps, ret):
+        df = pd.DataFrame(np.NaN, columns=ret.columns, index=ret.index)
+        for date in ret.index:
+            date = date.strftime('%Y%m%d')
+            d = rps[date]
+            for c in d.index:
+                df.loc[date, c] = d.loc[c, 'RPS']
+        return df
+
+    df_new = pd.DataFrame(np.NaN, columns=ret120.columns, index=ret120.index)
+
+
+def get_predicted_and_real(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 20170930,
+                   20180331, 20180630, 20180930, 20190331, 20190630, 20190930]):
+    test_season = [str(x) for x in test_season]
+
+    for season in test_season:
+        res = get_xgb_prediction(test_season=[season], load=False)
+        res = res.reset_index(drop=True)
+        res_predicted = res.iloc[:30][['ts_code','name','label_new']]
+        res_predicted = res_predicted.sort_values(['label_new'], ascending=False)[['ts_code','name','label_new']]
+        res_predicted.rename(columns={'ts_code':'ts_code_predicted','name':'name_predicted'}, inplace=True)
+        res_predicted = res_predicted.reset_index(drop=True)
+        res_real = res[res['label_new']==1].iloc[:30][['ts_code','name']]
+        res_real.rename(columns={'ts_code':'ts_code_real','name':'name_real'}, inplace=True)
+        res_real = res_real.reset_index(drop=True)
+        res = pd.concat([res_predicted,res_real], axis=1)
+        res.to_sql('predicted_and_real_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
+        print(season)
+
+def get_recent_30(stock, start_date='20200601', end_date='20200806', replace=False):
+    df = pro.daily(ts_code=','.join(stock), start_date=start_date, end_date=end_date)[['ts_code','trade_date','close']]
+    code_lst = df['ts_code'].unique()
+    code_dict = {}
+    for i,code in enumerate(code_lst):
+        code_dict[code] = i
+    df['index'] = df['ts_code'].apply(lambda x:code_dict[x])
+    df.to_sql('visualize_top_5', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
 
 if __name__ == '__main__':
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
@@ -720,7 +862,7 @@ if __name__ == '__main__':
     df_base = pro.stock_basic()
     #
     # print(1)
-    # df_stock_season = get_season_basic(df_base=df_base, start_date='20200101', end_date='20200630', replace=False) #股票财务信息
+    df_stock_season = get_season_basic(df_base=df_base, start_date='20200101', end_date='20200630', replace=True) #股票财务信息
     # print(2)
     # df_stock_monthly = get_stock_monthly(df_base=df_base,start_date='20200101', end_date='20200630', replace=False)  #股票月行情
     # print(3)
@@ -731,13 +873,13 @@ if __name__ == '__main__':
 
 
     # 整理为基金季度特征
-    # month2season() #月线
-    # day2season(start_date='20160101', end_date='20191231', replace=True) #日线
+    # month2season(start_date='20200101', end_date='20200630', replace=False) #月线
+    # day2season(start_date='20200101', end_date='20200630', replace=False) #日线
 
     # visualize()
     # revise_name()
-    # truncate=3
-    # get_label(truncate=truncate, replace=True)
+    truncate=3
+    # get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
     # corr_analy(truncate=truncate, replace=True)
     # corr_heatmap()
 
@@ -750,10 +892,12 @@ if __name__ == '__main__':
     # print(end_date)
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
-    show_result(3)
-
-
-
+    # show_result(3)
+    # get_result([20200331,20200630])
+    # visualize_ar_car(end_date = '20190930')
+    # get_predicted_and_real()
+    # stock = ['000001.SZ', '000002.SZ', '000004.SZ', '000005.SZ', '000006.SZ']
+    # get_recent_30(stock=stock, replace=True)
 
 
 
