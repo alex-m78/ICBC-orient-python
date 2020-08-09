@@ -35,8 +35,9 @@ def handle_request():
                     predictions.append({k: row[k] for k in res_columns})
                 params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
-            except:
-                params = {'stockDataDetail':[]], 'predictStock':['aaa'], 'realStock':['bbb']}
+            except Exception as e::
+
+                params = {'stockDataDetail':[e]], 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
         # else:
             # producer.sendstrdata('wrong key')
