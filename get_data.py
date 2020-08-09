@@ -540,29 +540,26 @@ def corr_heatmap(truncate=3):
     # print('\nMost Negative Correlations:\n', correlations.head(30))
 
     import seaborn as sns
-
-
-
-
+    feature_lst.sort()
+    print(feature_lst)
     for each in feature_lst:
         if each != 'label_new':
-            # f, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(16,4))
-            # bins = 30
-            # ax1.hist(df_data[df_data["label_new"]== 1][each], bins = bins)
-            # ax1.set_title('Fraud')
-            #
-            # ax2.hist(df_data[df_data["label_new"] == 0][each], bins = bins)
-            # ax2.set_title('Normal')
+            try:
+                plt.cla()
+                print(each)
+                sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
+                sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
+                plt.legend()
+                plt.savefig('image/{}.png'.format(each))
 
-            # plt.xlabel(each)
-            # plt.ylabel('Number of being held')
-            # plt.yscale('log')
-
-            sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
-            sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
-            plt.legend()
-            plt.savefig('image/{}.png'.format(each))
-
+            except:
+                plt.cla()
+                print('failed')
+                df_data[each] = (df_data[each]-df_data[each].min())+1
+                sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
+                sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
+                plt.legend()
+                plt.savefig('image/{}.png'.format(each))
 
 def corr_analy(truncate=3, replace=False):
     df_data = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
@@ -584,6 +581,8 @@ def corr_analy(truncate=3, replace=False):
     print(len(df_data))
     df_data['filter'] = df_data['end_date'].apply(lambda x: str(x)[-4:])
     df_data.drop(df_data[df_data['filter'] == '1231'].index, inplace=True)
+    df_data.drop(df_data[(df_data['list_date']).astype(int) > (df_data['end_date']).astype(int)].index, inplace=True)
+
     print(len(df_data))
 
     feature_lst = list(set(final_dict.keys()) - set(['symbol','end_date','ts_code','ann_date','name','area','industry','market','list_date','setup_date']))
@@ -601,7 +600,7 @@ def corr_analy(truncate=3, replace=False):
         contrast = contrast.append([{'feature':final_dict[each],'mean_1':mean_1,'std_1':std_1,'len_1':len_1,'mean_0':mean_0, 'std_0':std_0,'len_0':len_0,'corr':correlations[each]}], ignore_index=True)
     contrast = contrast.round(2)
     contrast.to_sql('contrast_{}'.format(truncate), engine_ts, index=False, if_exists='replace', chunksize=5000)
-    exit()
+    # exit()
     #缺失值填充
     df_data['pb_amin'].fillna(0, inplace=True)
     df_data['pb_amax'].fillna(0, inplace=True)
@@ -638,6 +637,82 @@ def corr_analy(truncate=3, replace=False):
     # Display correlations
     print('Most Positive Correlations:\n', correlations.tail(30))
     print('\nMost Negative Correlations:\n', correlations.head(30))
+    
+# def corr_analy(truncate=3, replace=False):
+#     df_data = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
+#     #类型转换
+#     convert_lst = ['current_ratio', 'quick_ratio', 'inv_turn', 'ar_turn', 'ca_turn', 'total_cur_liab']
+#     for each in convert_lst:
+#         df_data[each] = df_data[each].astype(float)
+
+
+#     df_data['list_date'].fillna('null', inplace=True)
+#     df_data.drop(df_data[df_data['list_date'] =='null'].index, inplace=True)
+#     df_data['float_share_to_total_share'] = df_data['float_share_mean']/df_data['total_share_mean']
+#     df_data['list_time'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['list_date'].apply(lambda x:int(str(x)[:4]))
+#     df_data['setup_date'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['setup_date'].apply(lambda x:int(str(x)[:4]))
+#     df_data['chg_max_pos'] = (df_data['high'] - df_data['low'])/df_data['low'] if df_data['low'] is not None else 0
+#     df_data['chg_max_neg'] = (df_data['high'] - df_data['low'])/df_data['high'] if df_data['high'] is not None else 0
+
+#     print(df_data.columns)
+#     print(len(df_data))
+#     df_data['filter'] = df_data['end_date'].apply(lambda x: str(x)[-4:])
+#     df_data.drop(df_data[df_data['filter'] == '1231'].index, inplace=True)
+#     # df_data.drop(df_data[(df_data['list_date']).astype(int) > (df_data['end_date']).astype(int)].index, inplace=True)
+#     print(len(df_data))
+
+#     feature_lst = list(set(final_dict.keys()) - set(['symbol','end_date','ts_code','ann_date','name','area','industry','market','list_date','setup_date']))
+
+#     contrast = pd.DataFrame(columns=('feature','mean_1','std_1', 'len_1','t_1','mean_0', 'std_0', 'len_0','t_0'))
+#     correlations = df_data.corr()['label_new'].sort_values()
+
+#     for each in feature_lst:
+#         mean_1 = df_data[df_data['label_new']==1][each].mean()
+#         mean_0 = df_data[df_data['label_new']==0][each].mean()
+#         std_1 = df_data[df_data['label_new'] == 1][each].std()
+#         std_0 = df_data[df_data['label_new'] == 0][each].std()
+#         len_1 = df_data[df_data['label_new']==1][each].count()
+#         len_0 = df_data[df_data['label_new']==0][each].count()
+#         contrast = contrast.append([{'feature':final_dict[each],'mean_1':mean_1,'std_1':std_1,'len_1':len_1,'mean_0':mean_0, 'std_0':std_0,'len_0':len_0,'corr':correlations[each]}], ignore_index=True)
+#     contrast = contrast.round(2)
+#     contrast.to_sql('contrast_{}'.format(truncate), engine_ts, index=False, if_exists='replace', chunksize=5000)
+
+#     #缺失值填充
+#     df_data['pb_amin'].fillna(0, inplace=True)
+#     df_data['pb_amax'].fillna(0, inplace=True)
+#     df_data['pb_mean'].fillna(0, inplace=True)
+#     df_data['dv_ttm_mean'].fillna(0, inplace=True)
+
+#     stock_group = df_data.groupby('ts_code')
+#     group_lst = []
+#     for ts_code, group in stock_group:
+#         group.fillna(group.mean(), inplace=True)
+#         group_lst.append(group)
+#     df_data = pd.concat(group_lst)
+
+#     df_data.fillna(df_data.mean(), inplace=True)
+
+#     df_data.to_sql('train_data_fillna_{}'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
+
+#     print(df_data.dtypes.value_counts())
+#     print('-------------------------------------------------')
+
+#     # Number of unique classes in each object column
+#     print(df_data.select_dtypes('object').apply(pd.Series.nunique, axis=0))
+#     print('-------------------------------------------------')
+
+#     # Missing values statistics
+#     missing_values = missing_values_table(df_data)
+#     print(missing_values)
+#     print('-------------------------------------------------')
+
+#     print(df_data['label_new'].value_counts())
+#     print('-------------------------------------------------')
+
+#     correlations = df_data.corr()['label_new'].sort_values()
+#     # Display correlations
+#     print('Most Positive Correlations:\n', correlations.tail(30))
+#     print('\nMost Negative Correlations:\n', correlations.head(30))
 
 
 def get_ar(df_base, start_date='20160101', end_date='20191231', replace=False):
@@ -878,7 +953,7 @@ if __name__ == '__main__':
     # visualize()
     # revise_name()
     truncate=3
-    get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
+    # get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
     # corr_analy(truncate=truncate, replace=True)
     # corr_heatmap()
 
@@ -892,7 +967,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    # get_result()
+    get_result()
     # visualize_ar_car(end_date = '20190930')
     # get_predicted_and_real()
     # stock = ['000001.SZ', '000002.SZ', '000004.SZ', '000005.SZ', '000006.SZ']
