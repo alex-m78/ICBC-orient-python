@@ -4,3 +4,4 @@ kafka-python
 xgboost
 sqlalchemy
 scikit-learn
+pymysql
