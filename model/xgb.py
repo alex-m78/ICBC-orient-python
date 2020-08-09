@@ -35,7 +35,7 @@ def get_xgb_prediction(test_season=['20180930'], load=False):
     else:
         model = xgb.XGBClassifier(**other_params)
         model.fit(x_train, y_train)
-        pickle.dump(model, open(os.getcwd()+ "/saved_model/2xgb_{}.dat".format(test_season[0]), "wb"))
+        pickle.dump(model, open(os.getcwd()+ "/saved_model/xgb_{}.dat".format(test_season[0]), "wb"))
         # pickle.dump(x_train.columns, open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'wb'))
     print('computed time:',time.time()-time2)
     time3 = time.time()
