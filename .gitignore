@@ -1,6 +1,7 @@
 saved_model/
 model/__pycache__/
 .idea
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
