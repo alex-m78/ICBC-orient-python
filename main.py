@@ -36,7 +36,7 @@ def handle_request():
                 params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
 
-            except Exception as e::
+            except Exception as e:
                 params = {'stockDataDetail':[e], 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
         # else:
