@@ -36,7 +36,7 @@ def handle_request():
                 params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
             except:
-                params = {'stockDataDetail':[]], 'predictStock':['aaa'], 'realStock':['bbb']}
+                params = {'stockDataDetail':[], 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
         # else:
             # producer.sendstrdata('wrong key')
