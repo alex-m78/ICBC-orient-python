@@ -26,20 +26,20 @@ def handle_request():
             print("===========> producer:", producer)
             msg.value.decode('utf-8')
             print(msg.value.decode('utf-8'))
-            try:
-                res = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True)
-                res_columns = res.columns
-                res = res.iloc[:100]
-                predictions = []
-                for i, (_, row) in enumerate(res.iterrows()):
-                    predictions.append({k: row[k] for k in res_columns})
-                params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
-                producer.sendjsondata(params)
+            #try:
+            res = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True)
+            res_columns = res.columns
+            res = res.iloc[:100]
+            predictions = []
+            for i, (_, row) in enumerate(res.iterrows()):
+                predictions.append({k: row[k] for k in res_columns})
+            params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
+            producer.sendjsondata(params)
 
-            except Exception as e:
-                params = {'stockDataDetail':[e], 'predictStock':['aaa'], 'realStock':['bbb']}
-                producer.sendjsondata(params)
-                print(e)
+            #except Exception as e:
+                #params = {'stockDataDetail':[e], 'predictStock':['aaa'], 'realStock':['bbb']}
+                #producer.sendjsondata(params)
+                #print(e)
         # else:
             # producer.sendstrdata('wrong key')
             # print('wrong key')
