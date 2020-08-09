@@ -39,6 +39,7 @@ def handle_request():
             except Exception as e:
                 params = {'stockDataDetail':[e], 'predictStock':['aaa'], 'realStock':['bbb']}
                 producer.sendjsondata(params)
+                print(e)
         # else:
             # producer.sendstrdata('wrong key')
             # print('wrong key')
