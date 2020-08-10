@@ -484,9 +484,9 @@ def get_label(truncate=3, start_date='20160101', end_date='20191231', replace=Fa
         if c % 10 ==0:
             print(c)
 
-    df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
-    df_res = pd.concat([df,df_res], 0)
-    df_res.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
+    # df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
+    # df_res = pd.concat([df,df_res], 0)
+    # df_res.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
     df_res.to_sql('train_data_{}'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
     # df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
     # df.drop_duplicates(['ts_code', 'end_date'], inplace=True, keep='last')
@@ -568,9 +568,9 @@ def corr_analy(truncate=3, replace=False):
     for each in convert_lst:
         df_data[each] = df_data[each].astype(float)
 
-
     df_data['list_date'].fillna('null', inplace=True)
     df_data.drop(df_data[df_data['list_date'] =='null'].index, inplace=True)
+    df_data.drop(df_data[df_data['list_date'].astype(int)>df_data['end_date']].index, inplace=True)
     df_data['float_share_to_total_share'] = df_data['float_share_mean']/df_data['total_share_mean']
     df_data['list_time'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['list_date'].apply(lambda x:int(str(x)[:4]))
     df_data['setup_date'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['setup_date'].apply(lambda x:int(str(x)[:4]))
@@ -844,11 +844,11 @@ def show_result(truncate=3):
 
 
 def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 20170930,
-                   20180331, 20180630, 20180930, 20190331, 20190630, 20190930]):
+                   20180331, 20180630, 20180930, 20190331, 20190630, 20190930,20200331]):
     test_season = [str(x) for x in test_season]
 
     for season in test_season:
-        res = get_xgb_prediction(test_season=[season], load=False).iloc[:100]
+        res, predicted_and_real, acc, p30 = get_xgb_prediction(test_season=[season], load=False)#.iloc[:100]
         # res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
         print(season)
 
@@ -953,7 +953,7 @@ if __name__ == '__main__':
     # visualize()
     # revise_name()
     truncate=3
-    # get_label(truncate=truncate,start_date='20200101', end_date='20200630', replace=True)
+    # get_label(truncate=truncate,start_date='20160101', end_date='20200630', replace=True)
     # corr_analy(truncate=truncate, replace=True)
     # corr_heatmap()
 
@@ -967,11 +967,12 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    get_result()
+    # get_result()
     # visualize_ar_car(end_date = '20190930')
     # get_predicted_and_real()
     # stock = ['000001.SZ', '000002.SZ', '000004.SZ', '000005.SZ', '000006.SZ']
     # get_recent_30(stock=stock, replace=True)
+    get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
 
 
 

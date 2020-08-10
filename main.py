@@ -27,13 +27,16 @@ def handle_request():
             msg.value.decode('utf-8')
             print(msg.value.decode('utf-8'))
             #try:
-            res = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True)
+            res, predicted_and_real = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True)
             res_columns = res.columns
             res = res.iloc[:100]
-            predictions = []
+            predictions,predicted, real = [], [], []
             for i, (_, row) in enumerate(res.iterrows()):
                 predictions.append({k: row[k] for k in res_columns})
-            params = {'stockDataDetail':predictions, 'predictStock':['aaa'], 'realStock':['bbb']}
+            for i, (_, row) in enumerate(predicted_and_real.iterrows()):
+                predicted.append({k: row[k] for k in ['ts_code_predicted','name_predicted','label_new']})
+                real.append({k: row[k] for k in ['ts_code_real','name_real']})
+            params = {'stockDataDetail':predictions, 'predictStock':predicted, 'realStock':real}
             producer.sendjsondata(params)
 
             #except Exception as e:

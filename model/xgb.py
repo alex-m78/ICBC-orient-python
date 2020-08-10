@@ -5,7 +5,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn import metrics
 from sklearn.model_selection import train_test_split,StratifiedKFold,train_test_split,GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix, mean_squared_error,roc_auc_score
-from data_preprocessing import get_train_data, output_result
+from data_preprocessing import get_train_data, output_result, get_predicted_and_real
 from utils import precision_n, recall_n, precision_50
 from sqlalchemy import create_engine
 from sklearn.metrics import make_scorer
@@ -43,9 +43,13 @@ def get_xgb_prediction(test_season=['20180930'], load=False):
     y_pred = model.predict_proba(x_test)[:, 1]
 
     res = output_result(y_pred, test_name, test_season)
-    print('p10:{:.4f},p20:{:.4f},p30:{:.4f},p50:{:.4f},p100:{:.4f}'.format(precision_n(y_test, y_pred, 10),precision_n(y_test, y_pred, 20),precision_n(y_test, y_pred, 30),precision_n(y_test, y_pred, 50),precision_n(y_test, y_pred, 100)))
+    predicted_and_real = get_predicted_and_real(res)
+    print('p10:{:.4f},p30:{:.4f},p50:{:.4f},p100:{:.4f}'.format(precision_n(y_test, y_pred, 10),precision_n(y_test, y_pred, 30),precision_n(y_test, y_pred, 50),precision_n(y_test, y_pred, 100)))
+    acc = accuracy_score(y_test, y_pred>0.3)
+    print('accuracy:', acc)
     print('output time:',time.time()-time3)
-    return res
+    print(predicted_and_real)
+    return res, predicted_and_real, acc, precision_n(y_test, y_pred, 30),
 
 def xgb_tuning(train_year=['2016', '2017', '2018', '2019'], test_season=['20180930']):
     truncate = 3

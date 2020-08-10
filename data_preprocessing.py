@@ -96,15 +96,23 @@ def output_result(y_pred, test_name, test_season):
     df['end_date'] = df['end_date'].astype(str)
 
     test_name['probability'] = y_pred
-    test_name.to_sql('temp_result', engine_ts, index=False,
-                     if_exists='replace', chunksize=5000)
     res = pd.merge(test_name, df, how='left', on=['ts_code', 'end_date'])
-
     res.sort_values('probability', ascending=False, inplace=True)
-    res = res
-
-    # res.to_csv('result/res_{}.csv'.format(test_season[0]))
+    res.to_sql('result_{}'.format(test_season[0]), engine_ts, index=False,
+                     if_exists='replace', chunksize=5000)
     return res
+
+def get_predicted_and_real(res):
+    res = res.reset_index(drop=True)
+    res_predicted = res.iloc[:30][['ts_code','name','label_new','probability']]
+    res_predicted = res_predicted.sort_values(['label_new','probability'], ascending=False)[['ts_code','name','label_new']]
+    res_predicted.rename(columns={'ts_code':'ts_code_predicted','name':'name_predicted'}, inplace=True)
+    res_predicted = res_predicted.reset_index(drop=True)
+    res_real = res[res['label_new']==1].iloc[:30][['ts_code','name']]
+    res_real.rename(columns={'ts_code':'ts_code_real','name':'name_real'}, inplace=True)
+    res_real = res_real.reset_index(drop=True)
+    predicted_and_real = pd.concat([res_predicted,res_real], axis=1)
+    return predicted_and_real
 
 # g = res.groupby('end_date')
 # for end_date, sub_g in g:
