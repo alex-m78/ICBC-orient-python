@@ -5,16 +5,18 @@ import numpy as np
 import os
 
 
-def get_train_data(truncate, train_year=['2016', '2017', '2018'], test_season=['20190331', '20190630', '20190930']):
+def get_train_data(truncate, train_year=['2016', '2017', '2018'], test_season=['20190331', '20190630', '20190930'], read_sql=True):
     engine_ts = create_engine(
         'mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
-
-    try:
-        df = pd.read_sql(
-            'select * from train_data_fillna_{}'.format(truncate), engine_ts)
-        print('query success')
-    except BaseException as e:
-        print(e)
+    if read_sql:
+        try:
+            df = pd.read_sql(
+                'select * from train_data_fillna_{}'.format(truncate), engine_ts)
+            print('query success')
+        except BaseException as e:
+            print(e)
+    else:
+        df = pd.read_csv('data/train_data_fillna_3.csv', index_col=False)
 
     convert_dict = json.load(
         open(os.getcwd() + '/convert_dict.json', 'r', encoding='utf-8'))

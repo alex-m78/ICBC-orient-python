@@ -637,83 +637,6 @@ def corr_analy(truncate=3, replace=False):
     # Display correlations
     print('Most Positive Correlations:\n', correlations.tail(30))
     print('\nMost Negative Correlations:\n', correlations.head(30))
-    
-# def corr_analy(truncate=3, replace=False):
-#     df_data = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
-#     #类型转换
-#     convert_lst = ['current_ratio', 'quick_ratio', 'inv_turn', 'ar_turn', 'ca_turn', 'total_cur_liab']
-#     for each in convert_lst:
-#         df_data[each] = df_data[each].astype(float)
-
-
-#     df_data['list_date'].fillna('null', inplace=True)
-#     df_data.drop(df_data[df_data['list_date'] =='null'].index, inplace=True)
-#     df_data['float_share_to_total_share'] = df_data['float_share_mean']/df_data['total_share_mean']
-#     df_data['list_time'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['list_date'].apply(lambda x:int(str(x)[:4]))
-#     df_data['setup_date'] = df_data['end_date'].apply(lambda x:int(str(x)[:4]))-df_data['setup_date'].apply(lambda x:int(str(x)[:4]))
-#     df_data['chg_max_pos'] = (df_data['high'] - df_data['low'])/df_data['low'] if df_data['low'] is not None else 0
-#     df_data['chg_max_neg'] = (df_data['high'] - df_data['low'])/df_data['high'] if df_data['high'] is not None else 0
-
-#     print(df_data.columns)
-#     print(len(df_data))
-#     df_data['filter'] = df_data['end_date'].apply(lambda x: str(x)[-4:])
-#     df_data.drop(df_data[df_data['filter'] == '1231'].index, inplace=True)
-#     # df_data.drop(df_data[(df_data['list_date']).astype(int) > (df_data['end_date']).astype(int)].index, inplace=True)
-#     print(len(df_data))
-
-#     feature_lst = list(set(final_dict.keys()) - set(['symbol','end_date','ts_code','ann_date','name','area','industry','market','list_date','setup_date']))
-
-#     contrast = pd.DataFrame(columns=('feature','mean_1','std_1', 'len_1','t_1','mean_0', 'std_0', 'len_0','t_0'))
-#     correlations = df_data.corr()['label_new'].sort_values()
-
-#     for each in feature_lst:
-#         mean_1 = df_data[df_data['label_new']==1][each].mean()
-#         mean_0 = df_data[df_data['label_new']==0][each].mean()
-#         std_1 = df_data[df_data['label_new'] == 1][each].std()
-#         std_0 = df_data[df_data['label_new'] == 0][each].std()
-#         len_1 = df_data[df_data['label_new']==1][each].count()
-#         len_0 = df_data[df_data['label_new']==0][each].count()
-#         contrast = contrast.append([{'feature':final_dict[each],'mean_1':mean_1,'std_1':std_1,'len_1':len_1,'mean_0':mean_0, 'std_0':std_0,'len_0':len_0,'corr':correlations[each]}], ignore_index=True)
-#     contrast = contrast.round(2)
-#     contrast.to_sql('contrast_{}'.format(truncate), engine_ts, index=False, if_exists='replace', chunksize=5000)
-
-#     #缺失值填充
-#     df_data['pb_amin'].fillna(0, inplace=True)
-#     df_data['pb_amax'].fillna(0, inplace=True)
-#     df_data['pb_mean'].fillna(0, inplace=True)
-#     df_data['dv_ttm_mean'].fillna(0, inplace=True)
-
-#     stock_group = df_data.groupby('ts_code')
-#     group_lst = []
-#     for ts_code, group in stock_group:
-#         group.fillna(group.mean(), inplace=True)
-#         group_lst.append(group)
-#     df_data = pd.concat(group_lst)
-
-#     df_data.fillna(df_data.mean(), inplace=True)
-
-#     df_data.to_sql('train_data_fillna_{}'.format(truncate), engine_ts, index=False, if_exists='replace'if replace else 'append', chunksize=5000)
-
-#     print(df_data.dtypes.value_counts())
-#     print('-------------------------------------------------')
-
-#     # Number of unique classes in each object column
-#     print(df_data.select_dtypes('object').apply(pd.Series.nunique, axis=0))
-#     print('-------------------------------------------------')
-
-#     # Missing values statistics
-#     missing_values = missing_values_table(df_data)
-#     print(missing_values)
-#     print('-------------------------------------------------')
-
-#     print(df_data['label_new'].value_counts())
-#     print('-------------------------------------------------')
-
-#     correlations = df_data.corr()['label_new'].sort_values()
-#     # Display correlations
-#     print('Most Positive Correlations:\n', correlations.tail(30))
-#     print('\nMost Negative Correlations:\n', correlations.head(30))
-
 
 def get_ar(df_base, start_date='20160101', end_date='20191231', replace=False):
 
@@ -831,9 +754,35 @@ def visualize_ar_car(end_date = '20190331'):
         df_res['car'] = df_res['ar'].cumsum()
         df_res['end_date']=end_date
         df_res['label_new'] = 1-label
-        # df_res.to_csv('visualize_car_ar_{}'.format(end_date))
-        df_res.to_sql('visualize_car_ar_{}'.format(end_date), engine_ts, index=False, if_exists='append', chunksize=5000)
+        df_res.to_csv('visualize_car_ar_{}'.format(end_date), mode='a')
+        # df_res.to_sql('visualize_car_ar_{}'.format(end_date), engine_ts, index=False, if_exists='append', chunksize=5000)
 
+def visualize_ar_car_for_label(end_date = '20190331'):
+    df = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)[['ts_code', 'end_date', 'label']]
+    df['end_date'] = df['end_date'].astype(str)
+    df_car = pd.read_sql('select * from stock_car', engine_ts)[['ts_code', 'trade_date', 'ar']]
+
+    df_1 = df[(df['label'] == 1) & (df['end_date'] == end_date)]
+    df_0 = df[(df['label'] == 0) & (df['end_date'] == end_date)]
+
+    df_res = pd.DataFrame()
+    for label, df_label in enumerate([df_1, df_0]):
+        for i, (_, row) in enumerate(df_label.iterrows()):
+            trade_date_min, trade_date_max = end_to_trade(row['end_date'])
+            df_row = df_car[(df_car['ts_code'] == row['ts_code']) & (df_car['trade_date'] >= trade_date_min) & (
+                        df_car['trade_date'] <= trade_date_max)]
+            df_row.sort_values(['trade_date'], ascending=True, inplace=True)
+            df_row['end_date'] = row['end_date']
+            df_res = df_res.append(df_row, ignore_index=True)
+            print(i, '/', len(df_label))
+
+        df_res = df_res.groupby('trade_date').mean()
+        df_res.sort_values(['trade_date'], inplace=True, ascending=True)
+        df_res = df_res.reset_index()
+        df_res['car'] = df_res['ar'].cumsum()
+        df_res['end_date']=end_date
+        df_res['label'] = 1-label
+        df_res.to_csv('visualize_car_ar_label_{}.csv'.format(end_date), mode='a')
 
 
 def show_result(truncate=3):
@@ -848,9 +797,9 @@ def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 
     test_season = [str(x) for x in test_season]
 
     for season in test_season:
-        res, predicted_and_real, acc, p30 = get_xgb_prediction(test_season=[season], load=False)#.iloc[:100]
+        res, predicted_and_real, acc, p30 = get_xgb_prediction(test_season=[season], load=True, read_sql=False)#.iloc[:100]
         # res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
-        print(season)
+        print(season,res,predicted_and_real,acc,p30)
 
 
 def RPS(df_base, start_date='20160101', end_date='20191231', replace=False):
@@ -918,14 +867,31 @@ def get_predicted_and_real(test_season = [20160331, 20160630, 20160930, 20170331
         res.to_sql('predicted_and_real_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
         print(season)
 
-def get_recent_30(stock, start_date='20200601', end_date='20200806', replace=False):
-    df = pro.daily(ts_code=','.join(stock), start_date=start_date, end_date=end_date)[['ts_code','trade_date','close']]
+def get_recent_30(season='20200331', replace=False):
+    import datetime
+    today = datetime.date.today().strftime('%Y%m%d')
+    start_date = (datetime.date.today() + datetime.timedelta(days=-60)).strftime('%Y%m%d')
+    stock = pd.read_sql('select * from result_{}'.format(season), engine_ts)['ts_code'].iloc[:5]
+    df = pro.daily(ts_code=','.join(stock), start_date=start_date, end_date=today)[['ts_code','trade_date','close']]
     code_lst = df['ts_code'].unique()
     code_dict = {}
     for i,code in enumerate(code_lst):
         code_dict[code] = i
     df['index'] = df['ts_code'].apply(lambda x:code_dict[x])
     df.to_sql('visualize_top_5', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
+
+def drwa_car(end_date='20200331'):
+    df_data = pd.read_sql('select * from visualize_car_ar_{}'.format(end_date), engine_ts)
+    df1 = df_data[df_data['label_new']==1]
+    df0 = df_data[df_data['label_new']==0]
+    plt.plot(list(range(-60,-60+len(df1))), df1['car'],label='1')
+    plt.plot(list(range(-60,-60+len(df1))),df0['car'],label='0')
+
+    plt.title('2020 Season 1~2 CAR')
+    plt.xlabel('date')
+    plt.ylabel('CAR')
+    plt.legend()
+    plt.show()
 
 if __name__ == '__main__':
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
@@ -967,17 +933,19 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    # get_result()
-    # visualize_ar_car(end_date = '20190930')
+    get_result([20200331])
+    # visualize_ar_car(end_date = '20200331')
     # get_predicted_and_real()
-    # stock = ['000001.SZ', '000002.SZ', '000004.SZ', '000005.SZ', '000006.SZ']
-    # get_recent_30(stock=stock, replace=True)
-    get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
+    # get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
 
+    # df_data = pd.read_sql('select * from train_data_fillna_{}'.format(truncate), engine_ts)
+    # df_data.to_csv('data/train_data_fillna_{}.csv'.format(truncate))
+    # visualize_ar_car_for_label(end_date = '20200331')
+    # df_res = pd.read_csv('visualize_car_ar_20200331.csv')
+    # df_res.to_sql('visualize_car_ar_20200331', engine_ts, index=False, if_exists='append', chunksize=5000)
 
-
-
-
+    # get_recent_30(season='20200331', replace=True)
+    # drwa_car()
 
 
 

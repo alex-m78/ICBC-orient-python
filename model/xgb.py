@@ -13,20 +13,18 @@ import pickle
 import time
 import os
 
-def get_xgb_prediction(test_season=['20180930'], load=False):
+def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
 
     time1 = time.time()
     truncate = 3
     x_train, x_test, y_train, y_test, test_name = get_train_data(truncate=truncate,
                                                                  train_year=['2016', '2017', '2018', '2019'],
-                                                                 test_season=test_season)
+                                                                 test_season=test_season, read_sql=read_sql)
     print('load data time:',time.time()-time1)
 
     other_params = {'eta': 0.3, 'n_estimators': 120, 'gamma': 0, 'max_depth': 6, 'min_child_weight': 12,
-                    'learning_rate': 0.1,
-                    'colsample_bytree': 1, 'colsample_bylevel': 0.5, 'subsample': 1.0, 'reg_lambda': 40,
-                    'reg_alpha': 10,
-                    'seed': 2020, 'scale_pos_weight': 1}
+                    'learning_rate': 0.1,'colsample_bytree': 1, 'colsample_bylevel': 0.5, 'subsample': 1.0, 'reg_lambda': 40,
+                    'reg_alpha': 10,'seed': 2020, 'scale_pos_weight': 1}
     time2 = time.time()
     if load:
         # columns_name = pickle.load(open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'rb'))
