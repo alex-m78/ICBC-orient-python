@@ -44,6 +44,7 @@ def get_train_data(truncate, train_year=['2016', '2017', '2018'], test_season=['
     select_feature.sort()
 
     df_train = pd.concat([df, onehot_train], 1)[select_feature]
+    # df_train.to_csv('train_data.csv')
 
     x_train, x_test, y_train, y_test, test_name = split_data(
         df_train, train_year=train_year, test_season=test_season)
@@ -94,17 +95,20 @@ def end_to_trade(end_date):
 def output_result(y_pred, test_name, test_season):
     engine_ts = create_engine(
         'mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
-    df = pd.read_sql('select * from display_prediction', engine_ts)
+    df = pd.read_csv('data/display_prediction.csv', index_col=False)
+    # df = pd.read_sql('select * from display_prediction', engine_ts)
     df['end_date'] = df['end_date'].astype(str)
 
     test_name['probability'] = y_pred
     res = pd.merge(test_name, df, how='left', on=['ts_code', 'end_date'])
     res.sort_values('probability', ascending=False, inplace=True)
-    res.to_sql('result_{}'.format(test_season[0]), engine_ts, index=False,
-                     if_exists='replace', chunksize=5000)
+    # res.to_sql('result_{}'.format(test_season[0]), engine_ts, index=False,
+    #                  if_exists='replace', chunksize=5000)
     return res
 
 def get_predicted_and_real(res):
+    engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
+
     res = res.reset_index(drop=True)
     res_predicted = res.iloc[:30][['ts_code','name','label_new','probability']]
     res_predicted = res_predicted.sort_values(['label_new','probability'], ascending=False)[['ts_code','name','label_new']]
@@ -114,6 +118,7 @@ def get_predicted_and_real(res):
     res_real.rename(columns={'ts_code':'ts_code_real','name':'name_real'}, inplace=True)
     res_real = res_real.reset_index(drop=True)
     predicted_and_real = pd.concat([res_predicted,res_real], axis=1)
+    # predicted_and_real.to_sql('predicted_and_real_{}', engine_ts, index=False, if_exists='replace', chunksize=5000)
     return predicted_and_real
 
 # g = res.groupby('end_date')

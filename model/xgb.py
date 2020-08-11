@@ -27,14 +27,11 @@ def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
                     'reg_alpha': 10,'seed': 2020, 'scale_pos_weight': 1}
     time2 = time.time()
     if load:
-        # columns_name = pickle.load(open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'rb'))
         model = pickle.load(open(os.getcwd()+"/saved_model/xgb_{}.dat".format(test_season[0]), "rb"))
-        # x_test = x_test[columns_name]
     else:
         model = xgb.XGBClassifier(**other_params)
         model.fit(x_train, y_train)
         pickle.dump(model, open(os.getcwd()+ "/saved_model/xgb_{}.dat".format(test_season[0]), "wb"))
-        # pickle.dump(x_train.columns, open(os.getcwd()+'/saved_model/columns_{}.pkl'.format(test_season[0]),'wb'))
     print('computed time:',time.time()-time2)
     time3 = time.time()
 
@@ -46,7 +43,6 @@ def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
     acc = accuracy_score(y_test, y_pred>0.3)
     print('accuracy:', acc)
     print('output time:',time.time()-time3)
-    print(predicted_and_real)
     return res, predicted_and_real, acc, precision_n(y_test, y_pred, 30),
 
 def xgb_tuning(train_year=['2016', '2017', '2018', '2019'], test_season=['20180930']):

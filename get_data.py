@@ -524,7 +524,7 @@ def missing_values_table(df):
 
 def corr_heatmap(truncate=3):
     df_data = pd.read_sql('select * from train_data_fillna_{}'.format(truncate), engine_ts)
-    feature_lst = list(set(final_dict.keys()) - set(['symbol','ts_code','end_date','symbol','name','area','industry','market','list_date','setup_date','close_std', 'chg_max_pos', 'chg_max_neg']))
+    feature_lst = list(set(final_dict.keys()) - set(['symbol','ts_code','ann_date','end_date','symbol','name','area','industry','market','list_date','setup_date','close_std', 'chg_max_pos', 'chg_max_neg']))
     df_data = df_data[feature_lst]
     # correlations = df_data.corr()
     # correction=abs(correlations)
@@ -540,9 +540,11 @@ def corr_heatmap(truncate=3):
     # print('\nMost Negative Correlations:\n', correlations.head(30))
 
     import seaborn as sns
+    sns.set_style("darkgrid")
     feature_lst.sort()
     print(feature_lst)
-    for each in feature_lst:
+    # for each in feature_lst:
+    for each in ['q_eps']:
         if each != 'label_new':
             try:
                 plt.cla()
@@ -550,7 +552,8 @@ def corr_heatmap(truncate=3):
                 sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
                 sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
                 plt.legend()
-                plt.savefig('image/{}.png'.format(each))
+                # plt.savefig('image/{}.png'.format(each))
+                plt.show()
 
             except:
                 plt.cla()
@@ -559,8 +562,8 @@ def corr_heatmap(truncate=3):
                 sns.distplot(df_data[df_data["label_new"] == 1][each].apply(lambda x: np.log(x)), label='1')
                 sns.distplot(df_data[df_data["label_new"] == 0][each].apply(lambda x: np.log(x)), label='0')
                 plt.legend()
-                plt.savefig('image/{}.png'.format(each))
-
+                # plt.savefig('image/{}.png'.format(each))
+                plt.show()
 def corr_analy(truncate=3, replace=False):
     df_data = pd.read_sql('select * from train_data_{}'.format(truncate), engine_ts)
     #类型转换
@@ -790,16 +793,19 @@ def show_result(truncate=3):
     df = df[['ts_code', 'end_date','symbol', 'name', 'total_mv_mean', 'float_share_to_total_share','eps','pb_mean', 'roe', 'pe_ttm_mean', 'bps','industry','label_new']]
 
     df.to_sql('display_prediction', engine_ts, index=False, if_exists='replace', chunksize=5000)
+    df.to_csv('data/display_prediction.csv')
 
 
 def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 20170930,
                    20180331, 20180630, 20180930, 20190331, 20190630, 20190930,20200331]):
     test_season = [str(x) for x in test_season]
-
+    df_res = pd.DataFrame(columns=['Season', 'Accuracy', 'PrecisionTop30'])
     for season in test_season:
         res, predicted_and_real, acc, p30 = get_xgb_prediction(test_season=[season], load=True, read_sql=False)#.iloc[:100]
         # res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
-        print(season,res,predicted_and_real,acc,p30)
+        print(season,acc,p30)
+        df_res = df_res.append([{'Season':season,'Accuracy':acc, 'PrecisionTop30':p30}],ignore_index=True)
+    # df_res.to_csv('result_acc.csv')
 
 
 def RPS(df_base, start_date='20160101', end_date='20191231', replace=False):
@@ -880,19 +886,23 @@ def get_recent_30(season='20200331', replace=False):
     df['index'] = df['ts_code'].apply(lambda x:code_dict[x])
     df.to_sql('visualize_top_5', engine_ts, index=False, if_exists='replace' if replace else 'append', chunksize=5000)
 
-def drwa_car(end_date='20200331'):
-    df_data = pd.read_sql('select * from visualize_car_ar_{}'.format(end_date), engine_ts)
-    df1 = df_data[df_data['label_new']==1]
-    df0 = df_data[df_data['label_new']==0]
+def draw_car(end_date='20200331'):
+    # df_data = pd.read_sql('select * from visualize_car_ar_label_{}'.format(end_date), engine_ts)
+    df_data = pd.read_csv('visualize_car_ar_label_{}.csv'.format(end_date))
+    df1 = df_data[df_data['label']==1]
+    df0 = df_data[df_data['label']==0]
     plt.plot(list(range(-60,-60+len(df1))), df1['car'],label='1')
     plt.plot(list(range(-60,-60+len(df1))),df0['car'],label='0')
-
+    plt.ylim(0,50)
     plt.title('2020 Season 1~2 CAR')
     plt.xlabel('date')
     plt.ylabel('CAR')
     plt.legend()
     plt.show()
 
+def get_industry():
+    df_industry = pd.read_csv('stock_industry.csv',index_col=False)
+    df_industry.to_sql('stock_industry', engine_ts, index=False, if_exists='replace', chunksize=5000)
 if __name__ == '__main__':
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
     pro = ts.pro_api('4c20c75b7e45fa73eefd12cf0eac8b8b89bd801215d910a2965d62cf')
@@ -933,7 +943,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    get_result([20200331])
+    get_result()
     # visualize_ar_car(end_date = '20200331')
     # get_predicted_and_real()
     # get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
@@ -945,7 +955,7 @@ if __name__ == '__main__':
     # df_res.to_sql('visualize_car_ar_20200331', engine_ts, index=False, if_exists='append', chunksize=5000)
 
     # get_recent_30(season='20200331', replace=True)
-    # drwa_car()
+    # draw_car()
 
 
 
