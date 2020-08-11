@@ -3,9 +3,8 @@ from model.xgb import get_xgb_prediction
 from consumer import Kafka_consumer
 from producer import Kafka_producer
 
-
-# res = get_xgb_prediction(test_season=['20180930'], load=True)
-
+availble_season = ['20160331', '20160630', '20160930', '20170331', '20170630', '20170930',
+                   '20180331', '20180630', '20180930', '20190331', '20190630', '20190930', '20200331']
 
 def handle_request():
     KAFAKA_HOST = "47.103.137.116"
@@ -19,14 +18,13 @@ def handle_request():
     print("===========> consumer:", consumer)
     message = consumer.consume_data()
     for msg in message:
-
         print('msg---------------->k,v', msg.key, msg.value)
 
-        if msg.key == b'endDate':
+        if msg.key == b'endDate' and msg.value.decode('utf-8') in availble_season:
             print("===========> producer:", producer)
-            msg.value.decode('utf-8')
+            # msg.value.decode('utf-8')
             print(msg.value.decode('utf-8'))
-            #try:
+
             res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True, read_sql=False)
             res_columns = res.columns
             res = res.iloc[:100]
