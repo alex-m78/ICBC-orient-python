@@ -106,49 +106,49 @@ def output_result(y_pred, test_name, test_season):
     #                  if_exists='replace', chunksize=5000)
     return res
 
-def get_predicted_and_real(res):
+def get_predicted_and_real(res, num=30):
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
 
     res = res.reset_index(drop=True)
-    res_predicted = res.iloc[:30][['ts_code','name','label_new','probability']]
+    res_predicted = res.iloc[:num][['ts_code','name','label_new','probability']]
     res_predicted = res_predicted.sort_values(['label_new','probability'], ascending=False)[['ts_code','name','label_new']]
     res_predicted.rename(columns={'ts_code':'ts_code_predicted','name':'name_predicted'}, inplace=True)
     res_predicted = res_predicted.reset_index(drop=True)
-    res_real = res[res['label_new']==1].iloc[:30][['ts_code','name']]
+    res_real = res[res['label_new']==1].iloc[:num][['ts_code','name']]
     res_real.rename(columns={'ts_code':'ts_code_real','name':'name_real'}, inplace=True)
     res_real = res_real.reset_index(drop=True)
     predicted_and_real = pd.concat([res_predicted,res_real], axis=1)
     # predicted_and_real.to_sql('predicted_and_real_{}', engine_ts, index=False, if_exists='replace', chunksize=5000)
     return predicted_and_real
 
-# g = res.groupby('end_date')
-# for end_date, sub_g in g:
-#     sub_g.sort_values('probability', ascending=False, inplace=True)
-#     sub_g = sub_g.iloc[:100]
-#
-#     car = []
-#     for i, (_, row) in enumerate(sub_g.iterrows()):
-#         trade_date_min, trade_date_max = end_to_trade(row['end_date'])
-#         df_row = df_car[(df_car['ts_code'] == row['ts_code']) & (df_car['trade_date'] >= trade_date_min) & (
-#                     df_car['trade_date'] <= trade_date_max)]
-#         car.append(df_row['ar'].sum())
-#
-#     sub_g['car'] = car
-#     print(sub_g.iloc[:20])
-#     print('car: top10:{:.4f}, top20:{:.4f}, top50:{:.4f}, top100:{:.4f}'
-#           .format(sub_g.iloc[:10]['car'].sum(),sub_g.iloc[:20]['car'].sum(), sub_g.iloc[:50]['car'].sum(),sub_g.iloc[:100]['car'].sum()))
-#     sub_g.to_csv('../result/res_{}.csv'.format(end_date))
+
+def get_industry(res, num=50):
+    df_industry = pd.read_csv('data/stock_industry.csv', index_col=False)
+    res_predicted = res.iloc[:num][['ts_code', 'name', 'probability']]
+    res_predicted = res_predicted.sort_values(['probability'], ascending=False)[['ts_code', 'name']]
+    res_real = res[res['label_new'] == 1][['ts_code', 'name', 'probability']]
+
+    res_predicted = pd.merge(res_predicted, df_industry, how='left', on=['ts_code'])
+    count_predicted = res_predicted['industry'].value_counts()
+    count_predicted = count_predicted[count_predicted.values>1]
+    res_real = pd.merge(res_real, df_industry, how='left', on=['ts_code'])
+    count_real = res_real['industry'].value_counts()
+    count_real = count_real[count_real.values>5]
+
+    return count_predicted.to_dict(), count_real.to_dict()
 
 
-# car = []
-# for i, (_, row) in enumerate(res.iterrows()):
-#     trade_date_min, trade_date_max = end_to_trade(row['end_date'])
-#     df_row = df_car[(df_car['ts_code'] == row['ts_code']) & (df_car['trade_date'] >= trade_date_min) & (
-#                 df_car['trade_date'] <= trade_date_max)]
-#     car.append(df_row['ar'].sum())
-#
-# res['car'] = car
+    # import matplotlib.pyplot as plt
+    # labels = list(count_predicted.index)
+    # X = count_predicted.values
+    # plt.figure()
+    # plt.pie(X, labels=labels, autopct='%1.2f%%')  # 画饼图（数据，数据对应的标签，百分数保留两位小数点）
+    # plt.title("Pie chart")
+    # plt.show()
+    # plt.close()
+    # labels = list(count_real.index)
+    # X = count_real.values
+    # plt.figure()
+    # plt.pie(X, labels=labels, autopct='%1.2f%%')  # 画饼图（数据，数据对应的标签，百分数保留两位小数点）
+    # plt.show()
 
-# print(res.iloc[:20])
-# print('car: top10:{:.4f}, top20:{:.4f}, top50:{:.4f}, top100:{:.4f}'
-#       .format(res.iloc[:10]['car'].sum(),res.iloc[:20]['car'].sum(), res.iloc[:50]['car'].sum(),res.iloc[:100]['car'].sum()))

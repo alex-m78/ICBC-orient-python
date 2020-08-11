@@ -801,7 +801,7 @@ def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 
     test_season = [str(x) for x in test_season]
     df_res = pd.DataFrame(columns=['Season', 'Accuracy', 'PrecisionTop30'])
     for season in test_season:
-        res, predicted_and_real, acc, p30 = get_xgb_prediction(test_season=[season], load=True, read_sql=False)#.iloc[:100]
+        res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(test_season=[season], load=True, read_sql=False)#.iloc[:100]
         # res.to_sql('result_{}'.format(season), engine_ts, index=False, if_exists='replace', chunksize=5000)
         print(season,acc,p30)
         df_res = df_res.append([{'Season':season,'Accuracy':acc, 'PrecisionTop30':p30}],ignore_index=True)
@@ -900,9 +900,15 @@ def draw_car(end_date='20200331'):
     plt.legend()
     plt.show()
 
-def get_industry():
+def get_industry_data():
     df_industry = pd.read_csv('stock_industry.csv',index_col=False)
-    df_industry.to_sql('stock_industry', engine_ts, index=False, if_exists='replace', chunksize=5000)
+    # df_industry['行业大类'] = df_industry['所属申万行业名称[行业级别] 全部明细'].apply(lambda x: x.split('-')[0])
+    # print(df_industry['行业大类'].value_counts(),len(df_industry['行业大类'].value_counts()))
+    #
+    # df_industry.rename(columns={'证券代码':'ts_code','证券简称':'name','所属申万行业名称[行业级别] 全部明细':'industry_detail','行业大类':'industry'}, inplace=True)
+    # df_industry.to_sql('stock_industry', engine_ts, index=False, if_exists='replace', chunksize=5000)
+    # df_industry.to_csv('stock_industry.csv')
+
 if __name__ == '__main__':
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
     pro = ts.pro_api('4c20c75b7e45fa73eefd12cf0eac8b8b89bd801215d910a2965d62cf')
@@ -943,7 +949,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    get_result()
+    get_result([20200331])
     # visualize_ar_car(end_date = '20200331')
     # get_predicted_and_real()
     # get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
@@ -956,7 +962,7 @@ if __name__ == '__main__':
 
     # get_recent_30(season='20200331', replace=True)
     # draw_car()
-
+    # get_industry_data()
 
 
 
