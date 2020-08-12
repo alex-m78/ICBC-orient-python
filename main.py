@@ -25,30 +25,33 @@ def handle_request():
             # msg.value.decode('utf-8')
             print([msg.value.decode('utf-8')])
 
-            res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(
-                test_season=['20200331'], load=True, read_sql=False)
-            res_columns = res.columns
-            res = res.iloc[:100]
+            if msg.value.decode('utf-8') in availble_season:
+                res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(
+                test_season=[msg.value.decode('utf-8')], load=True, read_sql=False)
+                res_columns = res.columns
+                res = res.iloc[:100]
 
-            predictions, predicted, real = [], [], []
-            industryDataPre, industryDataReal = [], []
+                predictions, predicted, real = [], [], []
+                industryDataPre, industryDataReal = [], []
 
-            for i, (_, row) in enumerate(res.iterrows()):
-                predictions.append({k: row[k] for k in res_columns})
-            for i, (_, row) in enumerate(predicted_and_real.iterrows()):
-                predicted.append({k: row[k] for k in ['ts_code_predicted', 'name_predicted', 'label_new']})
-                real.append({k: row[k] for k in ['ts_code_real', 'name_real']})
-            for k, v in count_predicted.items():
-                industryDataPre.append({'industryName': k, 'count': v})
-            for k, v in count_real.items():
-                industryDataReal.append({'industryName': k, 'count': v})
+                for i, (_, row) in enumerate(res.iterrows()):
+                    predictions.append({k: row[k] for k in res_columns})
+                for i, (_, row) in enumerate(predicted_and_real.iterrows()):
+                    predicted.append({k: row[k] for k in ['ts_code_predicted', 'name_predicted', 'label_new']})
+                    real.append({k: row[k] for k in ['ts_code_real', 'name_real']})
+                for k, v in count_predicted.items():
+                    industryDataPre.append({'industryName': k, 'count': v})
+                for k, v in count_real.items():
+                    industryDataReal.append({'industryName': k, 'count': v})
 
-            params = {'stockDataDetail': predictions, 'predictStock': predicted, 'realStock': real,
-                      'accuracy': round(acc, 3),
-                      'precisionTop30': round(p30, 3), 'industryDataPre': industryDataPre,
-                      'industryDataReal': industryDataReal}
-            producer.sendjsondata(params)
+                params = {'stockDataDetail': predictions, 'predictStock': predicted, 'realStock': real,
+                          'accuracy': round(acc, 3),
+                          'precisionTop30': round(p30, 3), 'industryDataPre': industryDataPre,
+                          'industryDataReal': industryDataReal}
+                producer.sendjsondata(params)
 
+            else:
+                producer.sendstrdata('null')
 
 if __name__ == '__main__':
 
