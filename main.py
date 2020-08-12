@@ -12,7 +12,7 @@ def handle_request():
     KAFKA_TOPIC_REC = 'topic_rec2'
     KAFKA_TOPIC_SEND = 'topic_send2'
 
-    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFKA_TOPIC_REC)
+    consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFKA_TOPIC_REC,group_id='test1')
     producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,KAFKA_TOPIC_SEND, key='predictions')
 
     print("===========> consumer:", consumer)
