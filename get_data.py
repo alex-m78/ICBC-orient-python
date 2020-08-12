@@ -949,7 +949,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    get_result([20200331])
+    get_result([20180331])
     # visualize_ar_car(end_date = '20200331')
     # get_predicted_and_real()
     # get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)

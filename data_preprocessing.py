@@ -56,7 +56,7 @@ def split_data(df_train, train_year, test_season):
     df_train['end_date'] = df_train['end_date'].astype(str)
 
     train, test = pd.DataFrame(), pd.DataFrame()
-
+    print(test_season)
     g = df_train.groupby(['end_date'])
     for date, group in g:
         if date[:4] in train_year and date not in test_season:

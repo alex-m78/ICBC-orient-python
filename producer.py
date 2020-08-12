@@ -50,14 +50,15 @@ class Kafka_producer():
 
 
 def main(end_date='20180630'):
-    key = 'end_date'
-    KAFAKA_HOST = "localhost"
+    key = 'endDate'
+    # KAFAKA_HOST = "47.103.137.116"
+    KAFAKA_HOST = 'localhost'
     KAFAKA_PORT = 9092
-    KAFAKA_TOPIC = "test"
+    KAFAKA_TOPIC = "topic_rec1"
     producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT, KAFAKA_TOPIC, key)
     print("===========> producer:", producer)
-    producer.sendjsondata([{'end_date': end_date}])
+    producer.sendjsondata(end_date)
 
 
 if __name__ == '__main__':
-    main('20180930')
+    main('20180331')

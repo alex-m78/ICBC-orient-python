@@ -9,8 +9,8 @@ availble_season = ['20160331', '20160630', '20160930', '20170331', '20170630', '
 def handle_request():
     KAFAKA_HOST = "47.103.137.116"
     KAFAKA_PORT = 9092
-    KAFKA_TOPIC_REC = 'topic_rec1'
-    KAFKA_TOPIC_SEND = 'topic_send1'
+    KAFKA_TOPIC_REC = 'topic_rec2'
+    KAFKA_TOPIC_SEND = 'topic_send2'
 
     consumer = Kafka_consumer(KAFAKA_HOST, KAFAKA_PORT, KAFKA_TOPIC_REC)
     producer = Kafka_producer(KAFAKA_HOST, KAFAKA_PORT,KAFKA_TOPIC_SEND, key='predictions')
@@ -20,10 +20,10 @@ def handle_request():
     for msg in message:
         print('msg---------------->k,v', msg.key, msg.value)
 
-        if msg.key == b'endDate' and msg.value.decode('utf-8') in availble_season:
+        if msg.key == b'endDate':
             print("===========> producer:", producer)
             # msg.value.decode('utf-8')
-            print(msg.value.decode('utf-8'))
+            print([msg.value.decode('utf-8')])
 
             res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True, read_sql=False)
             res_columns = res.columns
@@ -39,14 +39,6 @@ def handle_request():
                       'countReal':{'label':list(count_real.keys()),'count':list(count_real.values())}}
             producer.sendjsondata(params)
 
-            #except Exception as e:
-                #params = {'stockDataDetail':[e], 'predictStock':['aaa'], 'realStock':['bbb']}
-                #producer.sendjsondata(params)
-                #print(e)
-        # else:
-            # producer.sendstrdata('wrong key')
-            # print('wrong key')
 
 if __name__ == '__main__':
     handle_request()
-
