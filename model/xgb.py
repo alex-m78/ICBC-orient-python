@@ -44,6 +44,12 @@ def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
     acc = accuracy_score(y_test, y_pred>0.3)
     print('accuracy:', acc)
     print('output time:',time.time()-time3)
+    # 接口名
+    res = res[['ts_code','name','total_mv_mean','float_share_to_total_share','pb_mean', 'eps',
+    'roe','pe_ttm_mean','bps','industry']]
+    res.rename(columns={'name':'stockName','total_mv_mean':'totalWorth','float_share_to_total_share':'floatToTotal',
+                        'pb_mean':'pb', 'pe_ttm_mean':'pettm'}, inplace=True)
+    res = res.round(decimals=2)
     return res, predicted_and_real, acc, precision_n(y_test, y_pred, 30), count_predicted, count_real
 
 def xgb_tuning(train_year=['2016', '2017', '2018', '2019'], test_season=['20180930']):
