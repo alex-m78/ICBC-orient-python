@@ -25,20 +25,31 @@ def handle_request():
             # msg.value.decode('utf-8')
             print([msg.value.decode('utf-8')])
 
-            res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(test_season=[msg.value.decode('utf-8')], load=True, read_sql=False)
+            res, predicted_and_real, acc, p30, count_predicted, count_real = get_xgb_prediction(
+                test_season=['20200331'], load=True, read_sql=False)
             res_columns = res.columns
             res = res.iloc[:100]
-            predictions,predicted, real = [], [], []
+
+            predictions, predicted, real = [], [], []
+            industryDataPre, industryDataReal = [], []
+
             for i, (_, row) in enumerate(res.iterrows()):
                 predictions.append({k: row[k] for k in res_columns})
             for i, (_, row) in enumerate(predicted_and_real.iterrows()):
-                predicted.append({k: row[k] for k in ['ts_code_predicted','name_predicted','label_new']})
-                real.append({k: row[k] for k in ['ts_code_real','name_real']})
-            params = {'stockDataDetail':predictions, 'predictStock':predicted, 'realStock':real, 'accuracy':acc,
-                      'precisionTop30':p30, 'countPredict':{'label':list(count_predicted.keys()),'count':list(count_predicted.values())},
-                      'countReal':{'label':list(count_real.keys()),'count':list(count_real.values())}}
+                predicted.append({k: row[k] for k in ['ts_code_predicted', 'name_predicted', 'label_new']})
+                real.append({k: row[k] for k in ['ts_code_real', 'name_real']})
+            for k, v in count_predicted.items():
+                industryDataPre.append({'industryName': k, 'count': v})
+            for k, v in count_real.items():
+                industryDataReal.append({'industryName': k, 'count': v})
+
+            params = {'stockDataDetail': predictions, 'predictStock': predicted, 'realStock': real,
+                      'accuracy': round(acc, 3),
+                      'precisionTop30': round(p30, 3), 'industryDataPre': industryDataPre,
+                      'industryDataReal': industryDataReal}
             producer.sendjsondata(params)
 
 
 if __name__ == '__main__':
+
     handle_request()
