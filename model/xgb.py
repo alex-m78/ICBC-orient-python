@@ -12,6 +12,10 @@ from sklearn.metrics import make_scorer
 import pickle
 import time
 import os
+from xgboost import plot_tree
+from graphviz import Digraph
+import matplotlib.pyplot as plt
+import pydotplus
 
 def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
 
@@ -34,6 +38,9 @@ def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
         pickle.dump(model, open(os.getcwd()+ "/saved_model/xgb_{}.dat".format(test_season[0]), "wb"))
     print('computed time:',time.time()-time2)
     time3 = time.time()
+
+    # plot_tree(model, num_trees=1)
+    # plt.show()
 
     y_pred = model.predict_proba(x_test)[:, 1]
 

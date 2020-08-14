@@ -217,8 +217,6 @@ def get_season_fund(df_fund_base, start_date='20160101', end_date='20191231', re
     elif start_date[-4:] == '0701': start_date = start_date[:4] + '1001'
     elif start_date[-4:] == '1001': start_date = str(int(start_date[:4])+1) + '0101'
 
-    # start_date, end_date = '20160401', '20200401'
-
     set_dict = defaultdict(lambda : defaultdict(int))
     start_time = time.time()
     for i,ts_code in enumerate(df_fund_base['ts_code']):
@@ -788,12 +786,50 @@ def visualize_ar_car_for_label(end_date = '20190331'):
         df_res.to_csv('visualize_car_ar_label_{}.csv'.format(end_date), mode='a')
 
 
+def visualize_ar_car_for_predicted(end_date = '20190331'):
+    df = pd.read_sql('select * from visualize_car_ar_{}'.format(end_date), engine_ts)
+    df_predicted = pd.read_sql('select * from result_{}'.format(end_date), engine_ts)['ts_code']
+    df['end_date'] = df['end_date'].astype(str)
+    df_car = pd.read_sql('select * from stock_car', engine_ts)[['ts_code', 'trade_date', 'ar']]
+
+    df_predicted = df_predicted.iloc[:30]
+    df_res = pd.DataFrame()
+
+    for i, (k, v) in enumerate(df_predicted.items()):
+        trade_date_min, trade_date_max = end_to_trade(end_date)
+        df_row = df_car[(df_car['ts_code'] == v) & (df_car['trade_date'] >= trade_date_min) & (
+                    df_car['trade_date'] <= trade_date_max)]
+        df_row.sort_values(['trade_date'], ascending=True, inplace=True)
+        df_row['end_date'] = end_date
+        df_res = df_res.append(df_row, ignore_index=True)
+        print(i, '/', len(df_predicted))
+
+    df_res = df_res.groupby('trade_date').mean()
+    df_res.sort_values(['trade_date'], inplace=True, ascending=True)
+    df_res = df_res.reset_index()
+    df_res['car'] = df_res['ar'].cumsum()
+    df_res['end_date']=end_date
+    df_res['label'] = 2
+
+    df_1 = df[df['label_new'] == 1]
+    df_0 = df[df['label_new'] == 0]
+    plt.plot(list(range(-60, -60 + len(df_1))), df_1['car'], label='1')
+    plt.plot(list(range(-60, -60 + len(df_1))), df_0['car'], label='0')
+    plt.plot(list(range(-60, -60 + len(df_1))), df_res['car'], label='2')
+    # plt.ylim(0, 50)
+    plt.title('{} CAR'.format(end_date))
+    plt.xlabel('date')
+    plt.ylabel('CAR')
+    plt.legend()
+    plt.savefig('image/car_{}.png'.format(end_date))
+
+
 def show_result(truncate=3):
     df = pd.read_sql('select * from train_data_fillna_{}'.format(truncate), engine_ts)
     df = df[['ts_code', 'end_date','symbol', 'name', 'total_mv_mean', 'float_share_to_total_share','eps','pb_mean', 'roe', 'pe_ttm_mean', 'bps','industry','label_new']]
 
-    df.to_sql('display_prediction', engine_ts, index=False, if_exists='replace', chunksize=5000)
-    df.to_csv('data/display_prediction.csv')
+    # df.to_sql('display_prediction', engine_ts, index=False, if_exists='replace', chunksize=5000)
+    df.to_csv('data/display_prediction.csv', index=False)
 
 
 def get_result(test_season = [20160331, 20160630, 20160930, 20170331, 20170630, 20170930,
@@ -909,6 +945,27 @@ def get_industry_data():
     # df_industry.to_sql('stock_industry', engine_ts, index=False, if_exists='replace', chunksize=5000)
     # df_industry.to_csv('stock_industry.csv')
 
+
+def get_fund_position(df_fund_base, start_date='20160101', end_date='20191231', replace=False):
+    if end_date[-4:] == '1231': end_date = str(int(end_date[:4])+1)+'0401'
+    elif end_date[-4:] == '0331': end_date = end_date[:4] + '0701'
+    elif end_date[-4:] == '0630': end_date = end_date[:4] + '1001'
+    elif end_date[-4:] == '0930': end_date = end_date[:4] + '1001'
+
+    if start_date[-4:] == '0101': start_date = start_date[:4] + '0401'
+    elif start_date[-4:] == '0401': start_date = start_date[:4] + '0701'
+    elif start_date[-4:] == '0701': start_date = start_date[:4] + '1001'
+    elif start_date[-4:] == '1001': start_date = str(int(start_date[:4])+1) + '0101'
+
+    df_res = pd.DataFrame()
+    for i,ts_code in enumerate(df_fund_base['ts_code']):
+        df = pro.fund_portfolio(ts_code=ts_code, start_date=start_date, end_date=end_date)
+        df_res = df_res.append(df, ignore_index=True)
+        print(i,'/',len(df_fund_base))
+        time.sleep(1)
+    df_res.to_sql('fund_position', engine_ts, index=False, if_exists='replace', chunksize=5000)
+
+
 if __name__ == '__main__':
     engine_ts = create_engine('mysql+pymysql://test:123456@47.103.137.116:3306/testDB?charset=utf8&use_unicode=1')
     pro = ts.pro_api('4c20c75b7e45fa73eefd12cf0eac8b8b89bd801215d910a2965d62cf')
@@ -924,7 +981,8 @@ if __name__ == '__main__':
     # print(3)
     # df_stock_daily = get_stock_daily(df_base=df_base, start_date='20200101', end_date='20200630', replace=False)  #股票日行情
     # print(4)
-    # df_fund_base = get_fund_basic()  #基金基本信息
+    df_fund_base = get_fund_basic()  #基金基本信息
+    get_fund_position(df_fund_base, start_date='20160101', end_date='20200630', replace=False)
     # get_season_fund(df_fund_base, start_date='20200101', end_date='20200630', replace=False)  #基金季度持仓
 
 
@@ -949,7 +1007,7 @@ if __name__ == '__main__':
     # visualize_car(truncate=truncate, end_date = end_date)
     # visualize_holding_number()
     # show_result(3)
-    get_result([20180331])
+    # get_result([20200331])
     # visualize_ar_car(end_date = '20200331')
     # get_predicted_and_real()
     # get_ar(df_base, start_date='20200101', end_date='20200630', replace=False)
@@ -963,7 +1021,13 @@ if __name__ == '__main__':
     # get_recent_30(season='20200331', replace=True)
     # draw_car()
     # get_industry_data()
-
+    # visualize_ar_car_for_predicted(end_date = '20190331')
+    # plt.close()
+    # visualize_ar_car_for_predicted(end_date = '20190630')
+    # plt.close()
+    # visualize_ar_car_for_predicted(end_date = '20190930')
+    # plt.close()
+    # visualize_ar_car_for_predicted(end_date = '20200331')
 
 
 

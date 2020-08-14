@@ -130,13 +130,13 @@ def get_industry(res, num=50):
 
     res_predicted = pd.merge(res_predicted, df_industry, how='left', on=['ts_code'])
     count_predicted = res_predicted['industry'].value_counts()
-    count_predicted = count_predicted[count_predicted.values>1]
+    cut_predicted = count_predicted.sort_values(ascending=False).iloc[4]
+    count_predicted = count_predicted[count_predicted.values>=cut_predicted]
     res_real = pd.merge(res_real, df_industry, how='left', on=['ts_code'])
     count_real = res_real['industry'].value_counts()
-    count_real = count_real[count_real.values>5]
-
-    return count_predicted.to_dict(), count_real.to_dict()
-
+    cut_real = count_real.sort_values(ascending=False).iloc[4]
+    count_real = count_real[count_real.values>=cut_real]
+    print(len(count_predicted), len(count_real),len(set(count_real.index)|set(count_predicted.index)))
 
     # import matplotlib.pyplot as plt
     # labels = list(count_predicted.index)
@@ -151,4 +151,9 @@ def get_industry(res, num=50):
     # plt.figure()
     # plt.pie(X, labels=labels, autopct='%1.2f%%')  # 画饼图（数据，数据对应的标签，百分数保留两位小数点）
     # plt.show()
+
+    return count_predicted.to_dict(), count_real.to_dict()
+
+
+
 
