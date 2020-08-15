@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
-from sklearn import metrics
 from sklearn.model_selection import train_test_split,StratifiedKFold,train_test_split,GridSearchCV
 from sklearn.metrics import accuracy_score, confusion_matrix, mean_squared_error,roc_auc_score
 from data_preprocessing import get_train_data, output_result, get_predicted_and_real, get_industry
@@ -13,9 +12,8 @@ import pickle
 import time
 import os
 from xgboost import plot_tree
-from graphviz import Digraph
+# from graphviz import Digraph
 import matplotlib.pyplot as plt
-import pydotplus
 
 def get_xgb_prediction(test_season=['20180930'], load=False, read_sql=True):
 
