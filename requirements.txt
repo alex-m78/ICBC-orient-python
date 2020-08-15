@@ -5,3 +5,5 @@ xgboost
 sqlalchemy
 scikit-learn
 pymysql
+matplotlib
+graphviz
